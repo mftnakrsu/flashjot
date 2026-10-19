@@ -39,6 +39,14 @@ jobs:
 
       - run: npm ci
 
+      # Starlight ships .ts sources in node_modules, which docs-site/tsconfig.json doesn't include,
+      # so the build looks for a tsconfig further up and reaches the app's tsconfig.json in the
+      # repository root. That one extends .svelte-kit/tsconfig.json, which SvelteKit only generates
+      # after `npm install` in the root. An empty stand-in is enough for the docs.
+      - name: Stand in for SvelteKit's generated tsconfig
+        working-directory: .
+        run: mkdir -p .svelte-kit && echo '{}' > .svelte-kit/tsconfig.json
+
       - run: npm run build
 
       - uses: actions/configure-pages@v5
