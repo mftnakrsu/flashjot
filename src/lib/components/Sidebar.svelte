@@ -15,8 +15,9 @@
     if (e.key === "Escape") {
       nb.search("");
       (e.target as HTMLInputElement).blur();
-    } else if (e.key === "Enter" && nb.results[0]) {
-      nb.openPage(nb.results[0].path);
+    } else if (e.key === "Enter") {
+      // Search right away in case the debounced search for the last keystroke hasn't run yet.
+      nb.search(nb.query).then(() => nb.results[0] && nb.openPage(nb.results[0].path));
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       document.querySelector<HTMLElement>(".results button")?.focus();
@@ -49,7 +50,7 @@
       placeholder={t("nb.search")}
       aria-label={t("nb.search")}
       value={nb.query}
-      oninput={(e) => nb.search(e.currentTarget.value)}
+      oninput={(e) => nb.searchSoon(e.currentTarget.value)}
       onkeydown={onSearchKey}
     />
     <kbd>{mod}K</kbd>

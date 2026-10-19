@@ -65,14 +65,28 @@ class Notebook {
     return this.show({ kind: "page", path });
   }
 
-  async search(q: string) {
+  private searchTimer: ReturnType<typeof setTimeout> | undefined;
+  private searchSeq = 0;
+
+  /** For typing: waits for a short pause before searching. */
+  searchSoon(q: string) {
     this.query = q;
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.search(q), 150);
+  }
+
+  async search(q: string) {
+    clearTimeout(this.searchTimer);
+    this.query = q;
+    // Searches can finish out of order; only the latest one may set the results.
+    const seq = ++this.searchSeq;
     if (!q.trim()) {
       this.results = [];
       return;
     }
     try {
-      this.results = await api.searchNotes(q);
+      const results = await api.searchNotes(q);
+      if (seq === this.searchSeq) this.results = results;
     } catch (e) {
       this.error(e);
     }
