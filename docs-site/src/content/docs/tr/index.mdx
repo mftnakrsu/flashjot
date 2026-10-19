@@ -1,0 +1,127 @@
+---
+title: Fikirleri anında yakala
+description: Flashjot; Linux, Windows ve macOS için ücretsiz, açık kaynak bir hızlı not kutusu ve defter. Kısayola bas, fikri yaz, Enter'a bas. Notlar düz Markdown dosyalarıdır.
+template: splash
+hero:
+  title: Fikir kaybolmadan yaz
+  tagline: "Her yerde Ctrl+Alt+N'ye bas, yaz, Enter'a bas. Flashjot fikri Gelen kutusuna kaydeder ve önünden çekilir. Gerisi için bir defter var; her şey düz Markdown dosyası olarak durur."
+  actions:
+    - text: İndir
+      link: /tr/install/linux/
+      icon: right-arrow
+    - text: GitHub'da gör
+      link: https://github.com/mftnakrsu/flashjot
+      icon: github
+      variant: secondary
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+<video
+  class="demo-video"
+  controls
+  muted
+  loop
+  playsinline
+  autoplay
+  preload="metadata"
+  poster="/media/flashjot-demo-tr-poster.png"
+  src="/media/flashjot-demo-tr.mp4"
+  aria-label="Flashjot tanıtımı: hızlı kutu bir kısayolla açılır, bir not yazılıp kaydedilir, sonra defterde Gelen kutusundan bir klasöre taşınır"
+>
+  Tarayıcın bu videoyu oynatamıyor. <a href="/media/flashjot-demo-tr.mp4">Tanıtım videosunu indir</a> (MP4).
+</video>
+
+## Flashjot ne yapar
+
+Fikirler en olmadık anda gelir: bir derlemenin, bir toplantının ya da bir cümlenin ortasında. Koca
+bir not uygulamasını açmak akışını bozar, uygulama açılana kadar da fikir uçup gider. Flashjot not
+kutusunu bir kısayol uzağında tutar; düzenlemeye vaktin olduğunda da bir defter sunar.
+
+<CardGrid>
+  <Card title="Bir kısayol uzağında bir kutu" icon="pencil">
+    `Ctrl+Alt+N`, farenin olduğu ekranda küçük bir kutu açar; imleç zaten içindedir. `Enter`
+    kaydeder. Bkz. [Hızlı not](/tr/guide/quick-capture/).
+  </Card>
+  <Card title="Taslaklar kaybolmaz" icon="approve-check">
+    `Esc`'ye bas ya da başka bir yere tıkla; yazdığın bir sonraki açılışta yerinde durur. Kaydedilen
+    notlar, elektrik kesilse bile yarım dosya kalmayacak şekilde yazılır.
+  </Card>
+  <Card title="Sonra düzenlemek için Gelen kutusu" icon="list-format">
+    Hızlı notlar Gelen kutusuna kart olarak düşer. `M` ile birini klasöre taşı; ilk satırından
+    başlık alır.
+  </Card>
+  <Card title="Klasörlü bir defter" icon="open-book">
+    Klasörlerde sayfalar, yazdıkça biçimlenen bir Markdown editörü, tıklanabilir kutucuklar ve
+    `Ctrl+K` ile her şeyde arama. Bkz. [Defter](/tr/guide/notebook/).
+  </Card>
+  <Card title="Düz Markdown dosyaları" icon="document">
+    Her not, `Belgeler/Flashjot` içinde bir `.md` dosyasıdır. Obsidian'da, VS Code'da ya da herhangi
+    bir editörde aç; git'te ya da senkronize bir klasörde tut. Bkz. [Notların](/tr/guide/your-notes/).
+  </Card>
+  <Card title="Önce klavye" icon="laptop">
+    Her işin bir kısayolu var; global kısayolları Ayarlar'dan kendin kaydedebilirsin. Bkz.
+    [Kısayollar](/tr/guide/shortcuts/).
+  </Card>
+  <Card title="Linux, Windows ve macOS" icon="rocket">
+    Tauri ile yapıldı: içinde bir tarayıcı taşımak yerine sistemin web görünümünü kullanır, bu
+    yüzden kurulum dosyası 3 MB civarındadır. Tepside başlar, sen ne zaman istersen hazırdır.
+  </Card>
+  <Card title="Türkçe ve İngilizce, açık ve koyu" icon="translate">
+    Arayüz sistem dilini ve açık/koyu ayarını izler. İkisini de Ayarlar'dan değiştirebilirsin.
+  </Card>
+</CardGrid>
+
+<div class="screens">
+  <img
+    class="shot"
+    src="/screenshots/quick-tr.png"
+    alt="Masaüstünün üstünde hızlı kutu: Flashjot başlığının altında kırmızı çizgi olan beyaz bir kart ve “Omuz eklemi için kayış tahrik dene” yazısı"
+    width="1600"
+    height="900"
+    loading="lazy"
+  />
+  <img
+    class="shot"
+    src="/screenshots/inbox-tr.png"
+    alt="Defterin Gelen kutusu: üstünde kırmızı çizgi olan kartlar halinde üç hızlı not, kenar çubuğunda Fikirler ve İş klasörleri"
+    width="2160"
+    height="1350"
+    loading="lazy"
+  />
+</div>
+
+## İndir
+
+Sistemine uygun kurulum dosyasını [son sürümden](https://github.com/mftnakrsu/flashjot/releases/latest)
+indir. Ücretsizdir; hesap, telemetri ya da ağ bağlantısı yoktur: notların bilgisayarından hiç
+çıkmaz.
+
+<CardGrid>
+  <LinkCard
+    title="Linux"
+    description="Ubuntu, Debian, Pardus ve Mint için .deb, Fedora için .rpm, diğer her dağıtım için AppImage."
+    href="/tr/install/linux/"
+  />
+  <LinkCard title="Windows" description="Windows 10 ve 11 için kurulum dosyası." href="/tr/install/windows/" />
+  <LinkCard title="macOS" description="Apple Silicon ve Intel Mac'ler için disk görüntüleri." href="/tr/install/macos/" />
+</CardGrid>
+
+## Açık geliştiriliyor
+
+Flashjot, MIT Lisansı ile özgür bir yazılımdır. Kod, hatalar ve planlar
+[GitHub'da](https://github.com/mftnakrsu/flashjot). Yazım düzeltmesinden çeviriye, yeni özelliklere
+kadar her katkıya açığız.
+
+<CardGrid>
+  <LinkCard
+    title="Katkıda bulunmak"
+    description="Projeyi kur, kontrolleri çalıştır ve bir pull request aç."
+    href="/tr/development/contributing/"
+  />
+  <LinkCard
+    title="Yol haritası"
+    description="Sırada ne var: SQLite depolama, Wayland kısayolları ve daha fazlası."
+    href="/tr/roadmap/"
+  />
+</CardGrid>

@@ -10,6 +10,12 @@
 </p>
 
 <p align="center">
+  <a href="https://flashjot.mefby.com"><b>Website &amp; documentation</b></a> ·
+  <a href="https://github.com/mftnakrsu/flashjot/releases/latest"><b>Download</b></a> ·
+  <a href="https://flashjot.mefby.com/tr/">Türkçe</a>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/quick.png" width="560" alt="The quick box: a small card with a red rule and a text field">
 </p>
 
@@ -39,7 +45,7 @@ Ideas show up at bad times: in the middle of a build, a meeting, or a sentence. 
 
 ## Install
 
-Download the file for your system from [Releases](https://github.com/mftnakrsu/flashjot/releases):
+Download the file for your system from [Releases](https://github.com/mftnakrsu/flashjot/releases). Step-by-step guides for [Linux](https://flashjot.mefby.com/install/linux/), [Windows](https://flashjot.mefby.com/install/windows/) and [macOS](https://flashjot.mefby.com/install/macos/) are on the website.
 
 | System | File |
 |---|---|
@@ -51,7 +57,7 @@ Download the file for your system from [Releases](https://github.com/mftnakrsu/f
 
 Flashjot starts in the tray. The notebook opens the first time you launch it from the app menu.
 
-> **macOS:** the app is not notarized yet. The first time, right-click it and choose **Open**.
+> **macOS:** the app is not notarized yet. The first time, open it, then go to System Settings → Privacy & Security and choose **Open Anyway**. See the [macOS guide](https://flashjot.mefby.com/install/macos/).
 > **Windows:** SmartScreen may warn about an unknown publisher. Choose **More info → Run anyway**.
 
 ## Shortcuts
@@ -127,6 +133,7 @@ How the code is organized:
 | `src/routes/notebook/`, `src/lib/components/` | Notebook UI |
 | `src/lib/editor/` | CodeMirror Markdown editor |
 | `src/lib/i18n.svelte.ts` | Interface text. Add a language here |
+| `docs-site/` | The website and documentation (Astro Starlight), published to flashjot.mefby.com |
 
 ## Roadmap
 
