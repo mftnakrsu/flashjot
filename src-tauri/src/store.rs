@@ -17,6 +17,8 @@ pub enum StoreError {
     InvalidPath,
     InvalidName,
     NotFound,
+    /// The file changed on disk since it was read, e.g. another app saved it.
+    Conflict,
     Io(io::Error),
 }
 
@@ -27,6 +29,8 @@ impl fmt::Display for StoreError {
             StoreError::InvalidPath => write!(f, "invalid path"),
             StoreError::InvalidName => write!(f, "invalid name"),
             StoreError::NotFound => write!(f, "note not found"),
+            // Matched by the UI (CONFLICT in src/lib/api.ts).
+            StoreError::Conflict => write!(f, "note changed on disk"),
             StoreError::Io(e) => write!(f, "{e}"),
         }
     }
@@ -51,6 +55,13 @@ pub struct NoteMeta {
     /// Modification time, milliseconds since the Unix epoch.
     pub modified: i64,
     pub preview: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Note {
+    pub content: String,
+    /// Modification time when read; pass it back to `write` to detect changes made elsewhere.
+    pub modified: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -127,18 +138,25 @@ impl Store {
         Ok(Tree { folders, root_pages })
     }
 
-    pub fn read(&self, rel: &str) -> Result<String, StoreError> {
+    pub fn read(&self, rel: &str) -> Result<Note, StoreError> {
         let path = self.resolve(rel)?;
-        Ok(fs::read_to_string(path)?)
+        // Time first: a change landing in between then looks like a conflict, never the reverse.
+        let modified = modified_ms(&path);
+        Ok(Note { content: fs::read_to_string(path)?, modified })
     }
 
-    pub fn write(&self, rel: &str, content: &str) -> Result<(), StoreError> {
+    /// With `expected` (the `modified` from `read`), refuses to overwrite a file that
+    /// changed on disk since. Returns the new modification time.
+    pub fn write(&self, rel: &str, content: &str, expected: Option<i64>) -> Result<i64, StoreError> {
         let path = self.resolve(rel)?;
+        if expected.is_some_and(|m| m != modified_ms(&path)) {
+            return Err(StoreError::Conflict);
+        }
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
         atomic_write(&path, content)?;
-        Ok(())
+        Ok(modified_ms(&path))
     }
 
     pub fn create_folder(&self, name: &str) -> Result<(), StoreError> {
@@ -528,7 +546,7 @@ mod tests {
         let meta = s.add_inbox("step motor idea", at(14, 32, 5)).unwrap();
         assert_eq!(meta.path, "Inbox/2026-10-19-143205.md");
         assert_eq!(meta.folder, "Inbox");
-        assert_eq!(s.read(&meta.path).unwrap(), "step motor idea\n");
+        assert_eq!(s.read(&meta.path).unwrap().content, "step motor idea\n");
     }
 
     #[test]
@@ -559,8 +577,8 @@ mod tests {
     #[test]
     fn write_is_atomic_and_round_trips() {
         let (d, s) = store();
-        s.write("Ideas/a.md", "# A\nbody").unwrap();
-        assert_eq!(s.read("Ideas/a.md").unwrap(), "# A\nbody");
+        s.write("Ideas/a.md", "# A\nbody", None).unwrap();
+        assert_eq!(s.read("Ideas/a.md").unwrap().content, "# A\nbody");
         let leftovers: Vec<_> = fs::read_dir(d.path().join("Ideas"))
             .unwrap()
             .filter_map(|e| e.ok())
@@ -570,12 +588,36 @@ mod tests {
     }
 
     #[test]
+    fn write_returns_the_new_mtime_for_the_next_save() {
+        let (_d, s) = store();
+        let first = s.write("Ideas/a.md", "v1", None).unwrap();
+        let note = s.read("Ideas/a.md").unwrap();
+        assert_eq!((note.content.as_str(), note.modified), ("v1", first));
+        let second = s.write("Ideas/a.md", "v2", Some(first)).unwrap();
+        assert_eq!(s.read("Ideas/a.md").unwrap().modified, second);
+    }
+
+    #[test]
+    fn write_refuses_to_overwrite_a_file_changed_on_disk() {
+        let (d, s) = store();
+        s.write("Ideas/a.md", "mine", None).unwrap();
+        let seen = s.read("Ideas/a.md").unwrap().modified;
+        // Another app saves the file a little later.
+        let file = d.path().join("Ideas/a.md");
+        fs::write(&file, "theirs").unwrap();
+        let later = std::time::UNIX_EPOCH + std::time::Duration::from_millis(seen as u64 + 5000);
+        fs::File::options().write(true).open(&file).unwrap().set_modified(later).unwrap();
+        assert!(matches!(s.write("Ideas/a.md", "mine again", Some(seen)), Err(StoreError::Conflict)));
+        assert_eq!(s.read("Ideas/a.md").unwrap().content, "theirs");
+    }
+
+    #[test]
     fn rejects_paths_outside_root() {
         let (_d, s) = store();
         assert!(matches!(s.read("../x.md"), Err(StoreError::InvalidPath)));
         assert!(matches!(s.read("/etc/passwd"), Err(StoreError::InvalidPath)));
-        assert!(matches!(s.write("a/../../x.md", "x"), Err(StoreError::InvalidPath)));
-        assert!(matches!(s.write("Ideas/notes.txt", "x"), Err(StoreError::InvalidPath)));
+        assert!(matches!(s.write("a/../../x.md", "x", None), Err(StoreError::InvalidPath)));
+        assert!(matches!(s.write("Ideas/notes.txt", "x", None), Err(StoreError::InvalidPath)));
     }
 
     #[cfg(unix)]
@@ -584,7 +626,7 @@ mod tests {
         let (d, s) = store();
         let outside = tempfile::tempdir().unwrap();
         std::os::unix::fs::symlink(outside.path(), d.path().join("Link")).unwrap();
-        assert!(matches!(s.write("Link/evil.md", "x"), Err(StoreError::InvalidPath)));
+        assert!(matches!(s.write("Link/evil.md", "x", None), Err(StoreError::InvalidPath)));
         assert!(!outside.path().join("evil.md").exists());
     }
 
@@ -642,10 +684,10 @@ mod tests {
     fn rename_and_move() {
         let (_d, s) = store();
         let p = s.create_page("Ideas", "Old").unwrap();
-        s.write(&p.path, "body").unwrap();
+        s.write(&p.path, "body", None).unwrap();
         let r = s.rename(&p.path, "New").unwrap();
         assert_eq!(r.path, "Ideas/New.md");
-        assert_eq!(s.read("Ideas/New.md").unwrap(), "body");
+        assert_eq!(s.read("Ideas/New.md").unwrap().content, "body");
         s.create_page("Work", "New").unwrap();
         let m = s.move_to(&r.path, "Work").unwrap();
         assert_eq!(m.path, "Work/New 2.md");
@@ -724,8 +766,8 @@ mod tests {
     #[test]
     fn search_case_insensitive_with_snippet() {
         let (_d, s) = store();
-        s.write("Ideas/Robot.md", "# Robot\nuse a Step Motor here").unwrap();
-        s.write("Work/Other.md", "nothing").unwrap();
+        s.write("Ideas/Robot.md", "# Robot\nuse a Step Motor here", None).unwrap();
+        s.write("Work/Other.md", "nothing", None).unwrap();
         s.add_inbox("step by step", at(2, 0, 0)).unwrap();
         let hits = s.search("STEP").unwrap();
         assert_eq!(hits.len(), 2);
@@ -736,8 +778,8 @@ mod tests {
     #[test]
     fn search_ignores_turkish_dotted_and_dotless_i() {
         let (_d, s) = store();
-        s.write("Trips/İstanbul.md", "ILIK bir gün").unwrap();
-        s.write("Work/Plan.md", "Ship it").unwrap();
+        s.write("Trips/İstanbul.md", "ILIK bir gün", None).unwrap();
+        s.write("Work/Plan.md", "Ship it", None).unwrap();
         let titles = |q: &str| s.search(q).unwrap().into_iter().map(|h| h.title).collect::<Vec<_>>();
         assert_eq!(titles("istanbul"), ["İstanbul"]);
         assert_eq!(titles("İSTANBUL"), ["İstanbul"]);
@@ -750,9 +792,9 @@ mod tests {
     fn search_matches_title_and_limits() {
         let (_d, s) = store();
         for i in 0..60 {
-            s.write(&format!("Many/n{i}.md"), "needle").unwrap();
+            s.write(&format!("Many/n{i}.md"), "needle", None).unwrap();
         }
-        s.write("Ideas/Needle title.md", "").unwrap();
+        s.write("Ideas/Needle title.md", "", None).unwrap();
         let hits = s.search("needle").unwrap();
         assert_eq!(hits.len(), 50);
         assert!(s.search("title").unwrap().iter().any(|h| h.title == "Needle title"));

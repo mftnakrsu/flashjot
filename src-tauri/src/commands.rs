@@ -1,7 +1,7 @@
 //! Tauri commands called from the frontend. Thin wrappers around `store` and `settings`.
 
 use crate::settings::{self, Settings};
-use crate::store::{Hit, NoteMeta, Store, Tree};
+use crate::store::{Hit, Note, NoteMeta, Store, Tree};
 use crate::{shortcuts, windows};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -65,14 +65,15 @@ pub fn get_tree(state: State<AppState>) -> CmdResult<Tree> {
 }
 
 #[tauri::command]
-pub fn read_note(state: State<AppState>, path: String) -> CmdResult<String> {
+pub fn read_note(state: State<AppState>, path: String) -> CmdResult<Note> {
     with_store(&state, |s| s.read(&path))
 }
 
 /// Autosave target; does not emit `notes-changed` to avoid reloading the editor on every keystroke.
+/// `modified` is the time from `read_note` or the last save; returns the new one.
 #[tauri::command]
-pub fn write_note(state: State<AppState>, path: String, content: String) -> CmdResult<()> {
-    with_store(&state, |s| s.write(&path, &content))
+pub fn write_note(state: State<AppState>, path: String, content: String, modified: Option<i64>) -> CmdResult<i64> {
+    with_store(&state, |s| s.write(&path, &content, modified))
 }
 
 #[tauri::command]
