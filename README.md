@@ -16,7 +16,11 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/quick.png" width="560" alt="The quick box: a small card with a red rule and a text field">
+  <img src="docs/media/flashjot-teaser.gif" width="820" alt="The quick box opens over a terminal with Ctrl+Alt+N, a note is typed and saved, and it lands in the Inbox">
+</p>
+
+<p align="center">
+  <a href="https://flashjot.mefby.com">Watch the demo</a> (with sound) on the website.
 </p>
 
 ## Why
