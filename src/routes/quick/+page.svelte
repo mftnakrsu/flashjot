@@ -111,7 +111,7 @@
     bind:this={box}
     bind:value={text}
     onkeydown={onKeydown}
-    placeholder={t("quick.placeholder")}
+    placeholder={status === "saved" ? "" : t("quick.placeholder")}
     aria-label={t("quick.placeholder")}
     spellcheck="true"
     disabled={status === "saving"}
