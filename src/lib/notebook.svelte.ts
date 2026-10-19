@@ -51,6 +51,14 @@ class Notebook {
   async show(view: View) {
     await this.flush();
     this.view = view;
+    // Autosave doesn't emit notes-changed, so previews of notes edited since may be stale.
+    if (view.kind === "inbox") {
+      try {
+        this.inbox = await api.listInbox();
+      } catch (e) {
+        this.error(e);
+      }
+    }
   }
 
   openPage(path: string) {
