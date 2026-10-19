@@ -211,7 +211,7 @@ impl Store {
     }
 
     pub fn search(&self, q: &str) -> Result<Vec<Hit>, StoreError> {
-        let needle = q.trim().to_lowercase();
+        let needle = fold(q.trim());
         if needle.is_empty() {
             return Ok(Vec::new());
         }
@@ -221,8 +221,8 @@ impl Store {
         for path in files {
             let title = path.file_stem().unwrap_or_default().to_string_lossy().into_owned();
             let content = fs::read_to_string(&path).unwrap_or_default();
-            let line = content.lines().find(|l| l.to_lowercase().contains(&needle));
-            if line.is_none() && !title.to_lowercase().contains(&needle) {
+            let line = content.lines().find(|l| fold(l).contains(&needle));
+            if line.is_none() && !fold(&title).contains(&needle) {
                 continue;
             }
             let snippet = line
@@ -487,6 +487,17 @@ fn modified_ms(path: &Path) -> i64 {
         .map_or(0, |d| d.as_millis() as i64)
 }
 
+/// Lowercase for search, with the Turkish I/İ/ı/i all folded to "i" so either spelling
+/// finds the other ("istanbul" finds "İstanbul", "ılık" finds "ILIK").
+fn fold(s: &str) -> String {
+    s.chars()
+        .flat_map(|c| match c {
+            'I' | 'İ' | 'ı' => 'i'.to_lowercase(),
+            c => c.to_lowercase(),
+        })
+        .collect()
+}
+
 fn truncate(s: &str, max_chars: usize) -> String {
     match s.char_indices().nth(max_chars) {
         Some((i, _)) => format!("{}…", &s[..i]),
@@ -720,6 +731,19 @@ mod tests {
         assert_eq!(hits.len(), 2);
         let robot = hits.iter().find(|h| h.title == "Robot").unwrap();
         assert!(robot.snippet.contains("Step Motor"));
+    }
+
+    #[test]
+    fn search_ignores_turkish_dotted_and_dotless_i() {
+        let (_d, s) = store();
+        s.write("Trips/İstanbul.md", "ILIK bir gün").unwrap();
+        s.write("Work/Plan.md", "Ship it").unwrap();
+        let titles = |q: &str| s.search(q).unwrap().into_iter().map(|h| h.title).collect::<Vec<_>>();
+        assert_eq!(titles("istanbul"), ["İstanbul"]);
+        assert_eq!(titles("İSTANBUL"), ["İstanbul"]);
+        assert_eq!(titles("ılık"), ["İstanbul"]);
+        assert_eq!(titles("ilik"), ["İstanbul"]);
+        assert_eq!(titles("SHIP"), ["Plan"]);
     }
 
     #[test]
