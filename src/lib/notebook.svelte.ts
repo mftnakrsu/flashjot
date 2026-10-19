@@ -37,6 +37,7 @@ class Notebook {
 
   folderNames = $derived(this.tree.folders.map((f) => f.name));
 
+  /** Runs on every notes-changed event, which each command that changes notes emits. */
   async refresh() {
     try {
       const [tree, inbox] = await Promise.all([api.getTree(), api.listInbox()]);
@@ -104,7 +105,6 @@ class Notebook {
     try {
       const meta = await api.createPage(folder, t("nb.untitled"));
       await this.openPage(meta.path);
-      await this.refresh();
       this.focusTitle++;
     } catch (e) {
       this.error(e);
@@ -132,7 +132,6 @@ class Notebook {
       await this.flush();
       const meta = await api.renameNote(path, title);
       if (this.view.kind === "page" && this.view.path === path) this.view = { kind: "page", path: meta.path };
-      await this.refresh();
       return meta.path;
     } catch (e) {
       this.error(e);
@@ -145,7 +144,6 @@ class Notebook {
       await this.flush();
       const meta = await api.moveNote(path, folder);
       if (this.view.kind === "page" && this.view.path === path) this.view = { kind: "page", path: meta.path };
-      await this.refresh();
     } catch (e) {
       this.error(e);
     }
@@ -156,13 +154,9 @@ class Notebook {
       await this.flush();
       const trashPath = await api.trashNote(path);
       if (this.view.kind === "page" && this.view.path === path) this.view = { kind: "empty" };
-      await this.refresh();
       this.notify(t("nb.deleted"), "info", {
         label: t("nb.undo"),
-        run: async () => {
-          await api.restoreNote(trashPath, path);
-          await this.refresh();
-        },
+        run: () => api.restoreNote(trashPath, path),
       });
     } catch (e) {
       this.error(e);

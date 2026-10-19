@@ -69,6 +69,7 @@ export const hideWindow = () => invoke<void>("hide_window");
 export const openNotebook = (path?: string) => invoke<void>("open_notebook", { path });
 
 export const onNotesChanged = (cb: () => void): Promise<UnlistenFn> => listen("notes-changed", cb);
+export const onSettingsChanged = (cb: () => void): Promise<UnlistenFn> => listen("settings-changed", cb);
 
 export const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
 

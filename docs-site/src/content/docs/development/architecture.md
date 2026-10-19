@@ -24,7 +24,7 @@ Svelte UI ───────────────┘ ◀──────
 |---|---|
 | `store.rs` | Everything on disk: list folders and pages, read, write, create, rename, move, trash and restore, search. Validates every path coming from the UI and writes atomically. It has no Tauri dependency, so it is unit-tested with temporary folders. |
 | `settings.rs` | Loads and saves `settings.json`, filling in defaults and keeping a damaged file as `.bak`. |
-| `commands.rs` | The commands the UI calls, as thin wrappers around `store` and `settings`. After every change it emits `notes-changed` so all windows refresh. |
+| `commands.rs` | The commands the UI calls, as thin wrappers around `store` and `settings`. After every change to the notes it emits `notes-changed` so all windows refresh, and after saving settings it emits `settings-changed`. Commands that scan the whole notes folder (tree, Inbox, search) are async, so they run off the main thread. |
 | `windows.rs` | Creates the quick box and the notebook hidden at startup, so showing them is instant. Places the quick box on the monitor under the mouse. |
 | `shortcuts.rs` | Registers the two global shortcuts from settings and re-registers them when they change. |
 | `tray.rs` | The tray icon and its menu. |

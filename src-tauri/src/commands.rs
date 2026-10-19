@@ -158,18 +158,23 @@ pub fn get_settings(state: State<AppState>) -> CmdResult<Settings> {
 #[tauri::command]
 pub fn set_settings(app: AppHandle, state: State<AppState>, settings: Settings) -> CmdResult<Vec<String>> {
     let next = save_with_notes_dir(&state.settings_path, &settings).map_err(|e| e.to_string())?;
-    {
+    let new_root = {
         let mut store = state.store.lock().map_err(|e| e.to_string())?;
-        if store.root() != next.root() {
+        let new_root = store.root() != next.root();
+        if new_root {
             *store = next;
         }
-    }
+        new_root
+    };
     *state.settings.lock().map_err(|e| e.to_string())? = settings.clone();
     let mut problems = shortcuts::apply(&app, &settings);
     if let Err(e) = crate::sync_autostart(&app, settings.launch_at_login) {
         problems.push(e);
     }
-    changed(&app);
+    let _ = app.emit("settings-changed", ());
+    if new_root {
+        changed(&app);
+    }
     Ok(problems)
 }
 
