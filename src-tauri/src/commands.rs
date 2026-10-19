@@ -163,6 +163,7 @@ pub fn reveal_notes_dir(state: State<AppState>) -> CmdResult<()> {
 
 #[tauri::command]
 pub fn hide_window(window: tauri::WebviewWindow) -> CmdResult<()> {
+    eprintln!("DEBUG hide_window {}", window.label());
     window.hide().map_err(|e| e.to_string())
 }
 
