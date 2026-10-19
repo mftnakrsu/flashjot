@@ -25,6 +25,10 @@ syncs. **Show in file manager** opens the current folder.
 Flashjot doesn't move your existing notes when you change the folder. Copy them over yourself if
 you want them in the new place.
 
+If the folder can't be created, Flashjot says so and doesn't save the settings. If the folder can't
+be used when Flashjot starts (for example a drive that isn't plugged in), it uses the default
+folder until the folder is back.
+
 ## Language
 
 **Automatic** follows your system language. English and Türkçe are available; to add another

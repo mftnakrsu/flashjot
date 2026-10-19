@@ -35,7 +35,9 @@ Dosyaları herhangi bir editörle düzenleyebilir ya da Obsidian'ı aynı klasö
 Kenar çubuğu klasörü, defter açıldığında ve Flashjot'ta bir not eklediğin, yeniden adlandırdığın,
 taşıdığın ya da sildiğin her seferde yeniden okur; başka yerde oluşturulan dosyalar o zaman
 görünür. Sen başka yerde düzenlerken Flashjot'ta açık olan bir sayfa henüz kendiliğinden yenilenmez;
-başka bir sayfaya geçip geri dön. Klasördeki değişiklikleri izlemek [yol haritasında](/tr/roadmap/).
+başka bir sayfaya geçip geri dön. Flashjot bu dışarıdaki değişikliklerin üzerine asla yazmaz: diskte
+değişmiş bir sayfaya yazarsan bunu söyler ve kaydetmek yerine diskteki sürümü yükler. Klasördeki
+değişiklikleri izlemek [yol haritasında](/tr/roadmap/).
 
 ## Güvenli kayıt
 

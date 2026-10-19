@@ -70,7 +70,7 @@ Flashjot if it isn't running and reuse it if it is, so the quick box still opens
 - **KDE Plasma:** System Settings → Keyboard → Shortcuts → Add New → Command or Script.
 
 If you installed the AppImage, use its full path instead of `flashjot`, for example
-`/home/you/Apps/Flashjot_0.1.0_amd64.AppImage --quick`.
+`/home/you/Apps/Flashjot_0.1.1_amd64.AppImage --quick`.
 
 To see which session you are in, run `echo $XDG_SESSION_TYPE`.
 

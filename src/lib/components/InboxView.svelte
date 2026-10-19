@@ -19,6 +19,8 @@
   }
 
   function onKey(e: KeyboardEvent, path: string) {
+    // Keys on the card's own buttons (Enter, Space) belong to those buttons.
+    if (e.target !== e.currentTarget) return;
     const list = cards();
     const i = list.indexOf(e.currentTarget as HTMLElement);
     if (e.key === "ArrowDown" || e.key === "j") {

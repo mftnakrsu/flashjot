@@ -37,6 +37,7 @@ class Notebook {
 
   folderNames = $derived(this.tree.folders.map((f) => f.name));
 
+  /** Runs on every notes-changed event, which each command that changes notes emits. */
   async refresh() {
     try {
       const [tree, inbox] = await Promise.all([api.getTree(), api.listInbox()]);
@@ -51,20 +52,42 @@ class Notebook {
   async show(view: View) {
     await this.flush();
     this.view = view;
+    // Autosave doesn't emit notes-changed, so previews of notes edited since may be stale.
+    if (view.kind === "inbox") {
+      try {
+        this.inbox = await api.listInbox();
+      } catch (e) {
+        this.error(e);
+      }
+    }
   }
 
   openPage(path: string) {
     return this.show({ kind: "page", path });
   }
 
-  async search(q: string) {
+  private searchTimer: ReturnType<typeof setTimeout> | undefined;
+  private searchSeq = 0;
+
+  /** For typing: waits for a short pause before searching. */
+  searchSoon(q: string) {
     this.query = q;
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.search(q), 150);
+  }
+
+  async search(q: string) {
+    clearTimeout(this.searchTimer);
+    this.query = q;
+    // Searches can finish out of order; only the latest one may set the results.
+    const seq = ++this.searchSeq;
     if (!q.trim()) {
       this.results = [];
       return;
     }
     try {
-      this.results = await api.searchNotes(q);
+      const results = await api.searchNotes(q);
+      if (seq === this.searchSeq) this.results = results;
     } catch (e) {
       this.error(e);
     }
@@ -82,7 +105,6 @@ class Notebook {
     try {
       const meta = await api.createPage(folder, t("nb.untitled"));
       await this.openPage(meta.path);
-      await this.refresh();
       this.focusTitle++;
     } catch (e) {
       this.error(e);
@@ -110,7 +132,6 @@ class Notebook {
       await this.flush();
       const meta = await api.renameNote(path, title);
       if (this.view.kind === "page" && this.view.path === path) this.view = { kind: "page", path: meta.path };
-      await this.refresh();
       return meta.path;
     } catch (e) {
       this.error(e);
@@ -123,7 +144,6 @@ class Notebook {
       await this.flush();
       const meta = await api.moveNote(path, folder);
       if (this.view.kind === "page" && this.view.path === path) this.view = { kind: "page", path: meta.path };
-      await this.refresh();
     } catch (e) {
       this.error(e);
     }
@@ -134,13 +154,9 @@ class Notebook {
       await this.flush();
       const trashPath = await api.trashNote(path);
       if (this.view.kind === "page" && this.view.path === path) this.view = { kind: "empty" };
-      await this.refresh();
       this.notify(t("nb.deleted"), "info", {
         label: t("nb.undo"),
-        run: async () => {
-          await api.restoreNote(trashPath, path);
-          await this.refresh();
-        },
+        run: () => api.restoreNote(trashPath, path),
       });
     } catch (e) {
       this.error(e);
