@@ -721,13 +721,17 @@ mod tests {
     }
 
     /// A hard link stands in for a case-insensitive file system, where "Idea.md" already
-    /// "exists" as the very file being renamed.
+    /// "exists" as the very file being renamed. On a case-insensitive disk (macOS) the link
+    /// fails with AlreadyExists because that is already the case under test.
     #[cfg(unix)]
     #[test]
     fn rename_onto_the_same_file_does_not_add_suffix() {
         let (d, s) = store();
         let p = s.create_page("Ideas", "idea").unwrap();
-        fs::hard_link(d.path().join("Ideas/idea.md"), d.path().join("Ideas/Idea.md")).unwrap();
+        match fs::hard_link(d.path().join("Ideas/idea.md"), d.path().join("Ideas/Idea.md")) {
+            Err(e) if e.kind() != io::ErrorKind::AlreadyExists => panic!("{e}"),
+            _ => {}
+        }
         assert_eq!(s.rename(&p.path, "Idea").unwrap().path, "Ideas/Idea.md");
         assert!(!d.path().join("Ideas/Idea 2.md").exists());
     }
