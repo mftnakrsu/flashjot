@@ -95,7 +95,7 @@ impl Store {
             return Err(StoreError::Empty);
         }
         let stem = now.format("%Y-%m-%d-%H%M%S").to_string();
-        let path = unique_path(&self.root.join(INBOX), &stem, "-");
+        let path = unique_path(&self.root.join(INBOX), &stem, "-", None);
         atomic_write(&path, &format!("{text}\n"))?;
         self.meta(&path)
     }
@@ -151,7 +151,7 @@ impl Store {
         let dir = self.folder_dir(folder)?;
         let title = valid_name(title)?;
         fs::create_dir_all(&dir)?;
-        let path = unique_path(&dir, title, " ");
+        let path = unique_path(&dir, title, " ", None);
         atomic_write(&path, "")?;
         self.meta(&path)
     }
@@ -163,7 +163,7 @@ impl Store {
         if from.file_stem().is_some_and(|s| s == title) {
             return self.meta(&from);
         }
-        let to = unique_path(dir, title, " ");
+        let to = unique_path(dir, title, " ", Some(&from));
         fs::rename(&from, &to)?;
         self.meta(&to)
     }
@@ -171,6 +171,9 @@ impl Store {
     pub fn move_to(&self, rel: &str, folder: &str) -> Result<NoteMeta, StoreError> {
         let from = self.existing(rel)?;
         let dir = self.folder_dir(folder)?;
+        if from.parent() == Some(&dir) {
+            return self.meta(&from);
+        }
         fs::create_dir_all(&dir)?;
         let mut stem = from.file_stem().unwrap_or_default().to_string_lossy().into_owned();
         // Quick notes are named by timestamp; once filed they get a readable title.
@@ -178,7 +181,7 @@ impl Store {
         if from_inbox && let Some(title) = title_from_text(&fs::read_to_string(&from)?) {
             stem = title;
         }
-        let to = unique_path(&dir, &stem, " ");
+        let to = unique_path(&dir, &stem, " ", Some(&from));
         fs::rename(&from, &to)?;
         self.meta(&to)
     }
@@ -189,7 +192,7 @@ impl Store {
         fs::create_dir_all(&trash)?;
         let stamp = chrono::Local::now().format("%Y%m%d%H%M%S%3f");
         let stem = from.file_stem().unwrap_or_default().to_string_lossy();
-        let to = unique_path(&trash, &format!("{stamp} {stem}"), " ");
+        let to = unique_path(&trash, &format!("{stamp} {stem}"), " ", None);
         fs::rename(&from, &to)?;
         Ok(rel_string(&self.root, &to))
     }
@@ -203,7 +206,7 @@ impl Store {
         let dir = original.parent().ok_or(StoreError::InvalidPath)?;
         fs::create_dir_all(dir)?;
         let stem = original.file_stem().unwrap_or_default().to_string_lossy().into_owned();
-        fs::rename(&from, unique_path(dir, &stem, " "))?;
+        fs::rename(&from, unique_path(dir, &stem, " ", None))?;
         Ok(())
     }
 
@@ -383,16 +386,33 @@ fn title_from_text(text: &str) -> Option<String> {
     (!title.is_empty()).then_some(title)
 }
 
-/// `dir/stem.md`, or `dir/stem{sep}2.md`, `…3.md` if taken.
-fn unique_path(dir: &Path, stem: &str, sep: &str) -> PathBuf {
+/// `dir/stem.md`, or `dir/stem{sep}2.md`, `…3.md` if taken. The file being renamed
+/// (`from`) does not count as taken, e.g. "idea" → "Idea" on a case-insensitive disk.
+fn unique_path(dir: &Path, stem: &str, sep: &str, from: Option<&Path>) -> PathBuf {
+    let taken = |p: &Path| p.exists() && !from.is_some_and(|f| same_file(p, f));
     let first = dir.join(format!("{stem}.md"));
-    if !first.exists() {
+    if !taken(&first) {
         return first;
     }
     (2..)
         .map(|n| dir.join(format!("{stem}{sep}{n}.md")))
-        .find(|p| !p.exists())
+        .find(|p| !taken(p))
         .expect("unbounded range")
+}
+
+#[cfg(unix)]
+fn same_file(a: &Path, b: &Path) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    match (fs::metadata(a), fs::metadata(b)) {
+        (Ok(a), Ok(b)) => a.dev() == b.dev() && a.ino() == b.ino(),
+        _ => false,
+    }
+}
+
+/// Windows resolves a path to the name stored on disk, so equal canonical paths are one file.
+#[cfg(not(unix))]
+fn same_file(a: &Path, b: &Path) -> bool {
+    matches!((a.canonicalize(), b.canonicalize()), (Ok(a), Ok(b)) if a == b)
 }
 
 /// Write to a temp file in the same folder, flush to disk, then rename over the target.
@@ -619,6 +639,29 @@ mod tests {
         let m = s.move_to(&r.path, "Work").unwrap();
         assert_eq!(m.path, "Work/New 2.md");
         assert!(matches!(s.read("Ideas/New.md"), Err(StoreError::NotFound)));
+    }
+
+    #[test]
+    fn move_into_current_folder_is_a_no_op() {
+        let (_d, s) = store();
+        let p = s.create_page("Ideas", "Same").unwrap();
+        assert_eq!(s.move_to(&p.path, "Ideas").unwrap().path, "Ideas/Same.md");
+        let r = s.create_page("", "Top").unwrap();
+        assert_eq!(s.move_to(&r.path, "").unwrap().path, "Top.md");
+        let n = s.add_inbox("idea", at(9, 0, 0)).unwrap();
+        assert_eq!(s.move_to(&n.path, "Inbox").unwrap().path, n.path);
+    }
+
+    /// A hard link stands in for a case-insensitive file system, where "Idea.md" already
+    /// "exists" as the very file being renamed.
+    #[cfg(unix)]
+    #[test]
+    fn rename_onto_the_same_file_does_not_add_suffix() {
+        let (d, s) = store();
+        let p = s.create_page("Ideas", "idea").unwrap();
+        fs::hard_link(d.path().join("Ideas/idea.md"), d.path().join("Ideas/Idea.md")).unwrap();
+        assert_eq!(s.rename(&p.path, "Idea").unwrap().path, "Ideas/Idea.md");
+        assert!(!d.path().join("Ideas/Idea 2.md").exists());
     }
 
     #[test]
