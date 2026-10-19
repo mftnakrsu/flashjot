@@ -56,6 +56,9 @@ fn save_with_notes_dir(settings_path: &Path, settings: &Settings) -> io::Result<
 
 type CmdResult<T> = Result<T, String>;
 
+// Commands that scan the whole notebook are `async`: Tauri then runs them on a worker
+// thread instead of the main thread, so a large folder never freezes the windows.
+
 fn changed(app: &AppHandle) {
     let _ = app.emit("notes-changed", ());
 }
@@ -76,12 +79,12 @@ pub fn add_quick_note(app: AppHandle, state: State<AppState>, text: String) -> C
     Ok(meta)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_inbox(state: State<AppState>) -> CmdResult<Vec<NoteMeta>> {
     with_store(&state, |s| s.list_inbox())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_tree(state: State<AppState>) -> CmdResult<Tree> {
     with_store(&state, |s| s.tree())
 }
@@ -140,7 +143,7 @@ pub fn restore_note(app: AppHandle, state: State<AppState>, trash_path: String, 
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn search_notes(state: State<AppState>, query: String) -> CmdResult<Vec<Hit>> {
     with_store(&state, |s| s.search(&query))
 }
