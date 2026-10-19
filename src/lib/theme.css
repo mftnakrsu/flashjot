@@ -1,0 +1,101 @@
+/* Flashjot visual language: cool paper, graphite text, fountain-pen ink.
+   The red "index card" rule marks quick notes (things captured with the hotkey). */
+
+:root {
+  --paper: #f7f8fa;
+  --sheet: #ffffff;
+  --side: #eef0f4;
+  --graphite: #23262b;
+  --muted: #6c717a;
+  --line: #dfe3e9;
+  --ink: #2f5bd3;
+  --ink-soft: #e4ebfb;
+  --card-rule: #e0475b;
+  --ok: #1f8a5b;
+  --danger: #c0392b;
+  --focus: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink);
+
+  --ui: "Atkinson Hyperlegible Next Variable", ui-sans-serif, system-ui, "Segoe UI", Ubuntu, sans-serif;
+  --writer: "iA Writer Quattro", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.0625rem;
+  --step-2: 1.375rem;
+  --step-3: 1.75rem;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #16181d;
+    --sheet: #1c1f25;
+    --side: #121418;
+    --graphite: #e6e8ec;
+    --muted: #979ca6;
+    --line: #2c3038;
+    --ink: #8ca8ff;
+    --ink-soft: #232c45;
+    --card-rule: #f06a78;
+    --ok: #4cc38a;
+    --danger: #ff7b6e;
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--paper);
+  color: var(--graphite);
+  font-family: var(--ui);
+  font-size: var(--step-0);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: 4px;
+}
+
+kbd {
+  font-family: var(--ui);
+  font-size: var(--step--1);
+  padding: 0 0.35em;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--sheet);
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
