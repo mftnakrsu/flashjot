@@ -11,6 +11,9 @@
   let status = $state<"idle" | "saving" | "saved" | "error">("idle");
   let notebookKey = $state(prettyShortcut("CommandOrControl+Alt+D"));
   let box: HTMLTextAreaElement;
+  // Hide on blur only after the box really had focus: some desktops (no WM, strict focus
+  // stealing prevention, Wayland) map it unfocused and report a blur right away.
+  let hadFocus = false;
 
   function readDraft(): string {
     try {
@@ -70,12 +73,17 @@
   onMount(() => {
     const unlisteners = [
       listen("quick-shown", () => {
+        hadFocus = false;
         if (status !== "saving") status = "idle";
         focusBox();
       }),
       getCurrentWindow().onFocusChanged(({ payload: focused }) => {
-        if (focused) focusBox();
-        else if (status === "idle" || status === "error") hide();
+        if (focused) {
+          hadFocus = true;
+          focusBox();
+        } else if (hadFocus && (status === "idle" || status === "error")) {
+          hide();
+        }
       }),
     ];
     getSettings()
@@ -201,6 +209,11 @@
     font-size: var(--step-1);
     line-height: 1.55;
     color: var(--graphite);
+  }
+
+  /* The only field in the window: the caret is focus indicator enough. */
+  textarea:focus-visible {
+    box-shadow: none;
   }
 
   textarea::placeholder {

@@ -172,7 +172,13 @@ impl Store {
         let from = self.existing(rel)?;
         let dir = self.folder_dir(folder)?;
         fs::create_dir_all(&dir)?;
-        let stem = from.file_stem().unwrap_or_default().to_string_lossy().into_owned();
+        let mut stem = from.file_stem().unwrap_or_default().to_string_lossy().into_owned();
+        // Quick notes are named by timestamp; once filed they get a readable title.
+        if from.parent() == Some(&self.root.join(INBOX)) && dir != self.root.join(INBOX) {
+            if let Some(title) = title_from_text(&fs::read_to_string(&from)?) {
+                stem = title;
+            }
+        }
         let to = unique_path(&dir, &stem, " ");
         fs::rename(&from, &to)?;
         self.meta(&to)
@@ -339,6 +345,43 @@ fn valid_name(name: &str) -> Result<&str, StoreError> {
         return Err(StoreError::InvalidName);
     }
     Ok(name)
+}
+
+/// A file-name-safe title from the first non-empty line: Markdown markers and characters
+/// not allowed in file names are dropped, and it is cut to 60 characters at a word boundary.
+fn title_from_text(text: &str) -> Option<String> {
+    let line = text.lines().map(str::trim).find(|l| !l.is_empty())?;
+    // Drop leading Markdown block markers: "# ", "> ", "- ", "1. ", "[ ]", "[x]".
+    let mut rest = line;
+    loop {
+        let mut next = rest.trim_start_matches(['#', '>', '-', '*', '+', ' ']);
+        let digits = next.len() - next.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+        if digits > 0 && next[digits..].starts_with(['.', ')']) {
+            next = next[digits + 1..].trim_start();
+        }
+        let next = ["[ ]", "[x]", "[X]"].iter().fold(next, |r, m| r.strip_prefix(m).unwrap_or(r));
+        if next == rest {
+            break;
+        }
+        rest = next;
+    }
+    let cleaned: String = rest
+        .chars()
+        .map(|c| if c.is_alphanumeric() || matches!(c, ' ' | '\'' | '(' | ')' | '&' | '+' | ',' | '!') { c } else { ' ' })
+        .collect();
+    let words: Vec<&str> = cleaned.split_whitespace().collect();
+    let mut title = String::new();
+    for w in words {
+        if title.chars().count() + w.chars().count() + 1 > 60 {
+            break;
+        }
+        if !title.is_empty() {
+            title.push(' ');
+        }
+        title.push_str(w);
+    }
+    let title = title.trim_matches(|c: char| c == ',' || c == ' ').to_string();
+    (!title.is_empty()).then_some(title)
 }
 
 /// `dir/stem.md`, or `dir/stem{sep}2.md`, `…3.md` if taken.
@@ -584,8 +627,34 @@ mod tests {
         let (_d, s) = store();
         let n = s.add_inbox("idea", at(9, 0, 0)).unwrap();
         let m = s.move_to(&n.path, "Ideas").unwrap();
-        assert_eq!(m.path, "Ideas/2026-10-19-090000.md");
+        assert_eq!(m.path, "Ideas/idea.md");
         assert!(s.list_inbox().unwrap().is_empty());
+    }
+
+    #[test]
+    fn moving_inbox_note_titles_it_from_first_line() {
+        let (_d, s) = store();
+        let n = s.add_inbox("- [ ] Use a *step* motor: base/arm?\nmore", at(9, 0, 0)).unwrap();
+        let m = s.move_to(&n.path, "Ideas").unwrap();
+        assert_eq!(m.path, "Ideas/Use a step motor base arm.md");
+        let long = "word ".repeat(30);
+        let n = s.add_inbox(&long, at(9, 0, 1)).unwrap();
+        let m = s.move_to(&n.path, "Ideas").unwrap();
+        assert!(m.title.chars().count() <= 60, "{}", m.title);
+        assert!(!m.title.ends_with(' '));
+        let n = s.add_inbox("### ***", at(9, 0, 2)).unwrap();
+        let m = s.move_to(&n.path, "Ideas").unwrap();
+        assert_eq!(m.title, "2026-10-19-090002");
+    }
+
+    #[test]
+    fn title_from_text_cases() {
+        assert_eq!(title_from_text("# Robot arm\nbody"), Some("Robot arm".into()));
+        assert_eq!(title_from_text("\n\n  > quoted: idea  "), Some("quoted idea".into()));
+        assert_eq!(title_from_text(".hidden"), Some("hidden".into()));
+        assert_eq!(title_from_text("   "), None);
+        assert_eq!(title_from_text("3D printer idea"), Some("3D printer idea".into()));
+        assert_eq!(title_from_text("2. second step"), Some("second step".into()));
     }
 
     #[test]
