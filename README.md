@@ -137,13 +137,14 @@ How the code is organized:
 
 ## Roadmap
 
-- [ ] Optional SQLite storage backend for very large notebooks (behind the same `store` interface)
-- [ ] Wayland global shortcuts through the XDG GlobalShortcuts portal
-- [ ] Watch the notes folder and reload pages edited in other apps
-- [ ] Tags and `#hashtags`
-- [ ] Images and attachments
-- [ ] Sync, using any folder-sync tool for now; built-in later
-- [ ] More languages (contributions welcome, see `src/lib/i18n.svelte.ts`)
+- [ ] Quick tasks from the quick box ([#18](https://github.com/mftnakrsu/flashjot/issues/18)) and an *Open tasks* view across all notes ([#19](https://github.com/mftnakrsu/flashjot/issues/19)), planned for v0.2
+- [ ] Optional SQLite storage backend for very large notebooks, behind the same `store` interface ([#22](https://github.com/mftnakrsu/flashjot/issues/22))
+- [ ] Wayland global shortcuts through the XDG GlobalShortcuts portal ([#20](https://github.com/mftnakrsu/flashjot/issues/20))
+- [ ] Watch the notes folder and reload pages edited in other apps ([#21](https://github.com/mftnakrsu/flashjot/issues/21))
+- [ ] Tags and `#hashtags` ([#23](https://github.com/mftnakrsu/flashjot/issues/23))
+- [ ] Images and attachments ([#24](https://github.com/mftnakrsu/flashjot/issues/24))
+- [ ] Sync, using any folder-sync tool for now; built-in later ([#25](https://github.com/mftnakrsu/flashjot/issues/25))
+- [ ] More languages, see `src/lib/i18n.svelte.ts` ([#26](https://github.com/mftnakrsu/flashjot/issues/26))
 - [ ] Signed and notarized macOS and Windows builds
 
 ## Türkçe
@@ -153,6 +154,8 @@ Flashjot, ani fikirleri kaybetmemek için yapılmış bir not uygulamasıdır. H
 ## Contributing
 
 Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Looking for a place to start? Issues labelled [`good first issue`](https://github.com/mftnakrsu/flashjot/labels/good%20first%20issue) are small and self-contained, and [`help wanted`](https://github.com/mftnakrsu/flashjot/labels/help%20wanted) lists everything that is open for contributors. Issues labelled `in progress` are already being worked on.
 
 ## License
 
