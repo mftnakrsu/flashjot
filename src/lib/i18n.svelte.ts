@@ -127,6 +127,11 @@ export function setLanguage(pref: "auto" | Lang) {
   if (typeof document !== "undefined") document.documentElement.lang = current;
 }
 
+/** The active UI language; reactive, so formatting that depends on it re-runs on change. */
+export function lang(): Lang {
+  return current;
+}
+
 /** Reactive inside components: re-renders when the language changes. */
 export function t(key: Key, vars: Record<string, string> = {}): string {
   let s: string = dictionaries[current][key] ?? en[key];

@@ -1,7 +1,7 @@
 // Notebook window state shared by its components.
 import * as api from "$lib/api";
 import type { Hit, NoteMeta, Tree } from "$lib/api";
-import { t } from "$lib/i18n.svelte";
+import { lang as uiLang, t } from "$lib/i18n.svelte";
 
 export type View =
   | { kind: "inbox" }
@@ -163,7 +163,7 @@ class Notebook {
 export const nb = new Notebook();
 
 /** "Today 14:32", "Yesterday 09:10" or a short date, in the UI language. */
-export function when(ms: number, lang = document.documentElement.lang || "en"): string {
+export function when(ms: number, lang: string = uiLang()): string {
   const d = new Date(ms);
   const now = new Date();
   const time = d.toLocaleTimeString(lang, { hour: "numeric", minute: "2-digit" });
