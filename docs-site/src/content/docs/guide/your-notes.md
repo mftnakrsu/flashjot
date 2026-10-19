@@ -34,8 +34,10 @@ Documents/Flashjot/
 You can edit the files with any editor, or point Obsidian at the same folder. The sidebar reloads
 the folder when the notebook starts and whenever you add, rename, move or delete a note in
 Flashjot, so files created elsewhere show up then. A page that is open in Flashjot while you edit
-it elsewhere doesn't reload by itself yet; switch to another page and back. Watching the folder for
-changes is on the [roadmap](/roadmap/).
+it elsewhere doesn't reload by itself yet; switch to another page and back. Flashjot never
+overwrites those outside edits: if you type in a page that changed on disk, it says so and loads
+the version on disk instead of saving over it. Watching the folder for changes is on the
+[roadmap](/roadmap/).
 
 ## Safe writes
 

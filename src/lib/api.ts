@@ -7,7 +7,14 @@ export interface NoteMeta {
   title: string;
   folder: string;
   modified: number;
-  preview: string;
+  /** Only set by listInbox. */
+  preview?: string;
+}
+
+export interface Note {
+  content: string;
+  /** Modification time when read; pass it back to writeNote. */
+  modified: number;
 }
 
 export interface Folder {
@@ -39,8 +46,12 @@ export const INBOX = "Inbox";
 export const addQuickNote = (text: string) => invoke<NoteMeta>("add_quick_note", { text });
 export const listInbox = () => invoke<NoteMeta[]>("list_inbox");
 export const getTree = () => invoke<Tree>("get_tree");
-export const readNote = (path: string) => invoke<string>("read_note", { path });
-export const writeNote = (path: string, content: string) => invoke<void>("write_note", { path, content });
+export const readNote = (path: string) => invoke<Note>("read_note", { path });
+/** Fails with CONFLICT if the file changed on disk since `modified`; returns the new time. */
+export const writeNote = (path: string, content: string, modified: number) =>
+  invoke<number>("write_note", { path, content, modified });
+/** StoreError::Conflict in src-tauri/src/store.rs. */
+export const CONFLICT = "note changed on disk";
 export const createFolder = (name: string) => invoke<void>("create_folder", { name });
 export const createPage = (folder: string, title: string) => invoke<NoteMeta>("create_page", { folder, title });
 export const renameNote = (path: string, title: string) => invoke<NoteMeta>("rename_note", { path, title });
@@ -58,6 +69,7 @@ export const hideWindow = () => invoke<void>("hide_window");
 export const openNotebook = (path?: string) => invoke<void>("open_notebook", { path });
 
 export const onNotesChanged = (cb: () => void): Promise<UnlistenFn> => listen("notes-changed", cb);
+export const onSettingsChanged = (cb: () => void): Promise<UnlistenFn> => listen("settings-changed", cb);
 
 export const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
 

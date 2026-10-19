@@ -17,6 +17,8 @@ pub enum StoreError {
     InvalidPath,
     InvalidName,
     NotFound,
+    /// The file changed on disk since it was read, e.g. another app saved it.
+    Conflict,
     Io(io::Error),
 }
 
@@ -27,6 +29,8 @@ impl fmt::Display for StoreError {
             StoreError::InvalidPath => write!(f, "invalid path"),
             StoreError::InvalidName => write!(f, "invalid name"),
             StoreError::NotFound => write!(f, "note not found"),
+            // Matched by the UI (CONFLICT in src/lib/api.ts).
+            StoreError::Conflict => write!(f, "note changed on disk"),
             StoreError::Io(e) => write!(f, "{e}"),
         }
     }
@@ -50,7 +54,16 @@ pub struct NoteMeta {
     pub folder: String,
     /// Modification time, milliseconds since the Unix epoch.
     pub modified: i64,
-    pub preview: String,
+    /// Start of the text; only read for the Inbox list, where it is shown.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preview: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Note {
+    pub content: String,
+    /// Modification time when read; pass it back to `write` to detect changes made elsewhere.
+    pub modified: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -95,13 +108,17 @@ impl Store {
             return Err(StoreError::Empty);
         }
         let stem = now.format("%Y-%m-%d-%H%M%S").to_string();
-        let path = unique_path(&self.root.join(INBOX), &stem, "-");
+        let path = unique_path(&self.root.join(INBOX), &stem, "-", None);
         atomic_write(&path, &format!("{text}\n"))?;
         self.meta(&path)
     }
 
     pub fn list_inbox(&self) -> Result<Vec<NoteMeta>, StoreError> {
         let mut items = self.pages_in(&self.root.join(INBOX))?;
+        for item in &mut items {
+            let content = fs::read_to_string(self.root.join(&item.path))?;
+            item.preview = Some(truncate(content.trim(), 200));
+        }
         // Names are timestamps, so a reverse sort on the stem is newest first
         // ("…143205-2" sorts above "…143205").
         items.sort_by(|a, b| b.title.cmp(&a.title));
@@ -127,18 +144,25 @@ impl Store {
         Ok(Tree { folders, root_pages })
     }
 
-    pub fn read(&self, rel: &str) -> Result<String, StoreError> {
+    pub fn read(&self, rel: &str) -> Result<Note, StoreError> {
         let path = self.resolve(rel)?;
-        Ok(fs::read_to_string(path)?)
+        // Time first: a change landing in between then looks like a conflict, never the reverse.
+        let modified = modified_ms(&path);
+        Ok(Note { content: fs::read_to_string(path)?, modified })
     }
 
-    pub fn write(&self, rel: &str, content: &str) -> Result<(), StoreError> {
+    /// With `expected` (the `modified` from `read`), refuses to overwrite a file that
+    /// changed on disk since. Returns the new modification time.
+    pub fn write(&self, rel: &str, content: &str, expected: Option<i64>) -> Result<i64, StoreError> {
         let path = self.resolve(rel)?;
+        if expected.is_some_and(|m| m != modified_ms(&path)) {
+            return Err(StoreError::Conflict);
+        }
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
         atomic_write(&path, content)?;
-        Ok(())
+        Ok(modified_ms(&path))
     }
 
     pub fn create_folder(&self, name: &str) -> Result<(), StoreError> {
@@ -151,7 +175,7 @@ impl Store {
         let dir = self.folder_dir(folder)?;
         let title = valid_name(title)?;
         fs::create_dir_all(&dir)?;
-        let path = unique_path(&dir, title, " ");
+        let path = unique_path(&dir, title, " ", None);
         atomic_write(&path, "")?;
         self.meta(&path)
     }
@@ -163,7 +187,7 @@ impl Store {
         if from.file_stem().is_some_and(|s| s == title) {
             return self.meta(&from);
         }
-        let to = unique_path(dir, title, " ");
+        let to = unique_path(dir, title, " ", Some(&from));
         fs::rename(&from, &to)?;
         self.meta(&to)
     }
@@ -171,6 +195,9 @@ impl Store {
     pub fn move_to(&self, rel: &str, folder: &str) -> Result<NoteMeta, StoreError> {
         let from = self.existing(rel)?;
         let dir = self.folder_dir(folder)?;
+        if from.parent() == Some(&dir) {
+            return self.meta(&from);
+        }
         fs::create_dir_all(&dir)?;
         let mut stem = from.file_stem().unwrap_or_default().to_string_lossy().into_owned();
         // Quick notes are named by timestamp; once filed they get a readable title.
@@ -178,7 +205,7 @@ impl Store {
         if from_inbox && let Some(title) = title_from_text(&fs::read_to_string(&from)?) {
             stem = title;
         }
-        let to = unique_path(&dir, &stem, " ");
+        let to = unique_path(&dir, &stem, " ", Some(&from));
         fs::rename(&from, &to)?;
         self.meta(&to)
     }
@@ -189,7 +216,7 @@ impl Store {
         fs::create_dir_all(&trash)?;
         let stamp = chrono::Local::now().format("%Y%m%d%H%M%S%3f");
         let stem = from.file_stem().unwrap_or_default().to_string_lossy();
-        let to = unique_path(&trash, &format!("{stamp} {stem}"), " ");
+        let to = unique_path(&trash, &format!("{stamp} {stem}"), " ", None);
         fs::rename(&from, &to)?;
         Ok(rel_string(&self.root, &to))
     }
@@ -203,12 +230,12 @@ impl Store {
         let dir = original.parent().ok_or(StoreError::InvalidPath)?;
         fs::create_dir_all(dir)?;
         let stem = original.file_stem().unwrap_or_default().to_string_lossy().into_owned();
-        fs::rename(&from, unique_path(dir, &stem, " "))?;
+        fs::rename(&from, unique_path(dir, &stem, " ", None))?;
         Ok(())
     }
 
     pub fn search(&self, q: &str) -> Result<Vec<Hit>, StoreError> {
-        let needle = q.trim().to_lowercase();
+        let needle = fold(q.trim());
         if needle.is_empty() {
             return Ok(Vec::new());
         }
@@ -218,8 +245,8 @@ impl Store {
         for path in files {
             let title = path.file_stem().unwrap_or_default().to_string_lossy().into_owned();
             let content = fs::read_to_string(&path).unwrap_or_default();
-            let line = content.lines().find(|l| l.to_lowercase().contains(&needle));
-            if line.is_none() && !title.to_lowercase().contains(&needle) {
+            let line = content.lines().find(|l| fold(l).contains(&needle));
+            if line.is_none() && !fold(&title).contains(&needle) {
                 continue;
             }
             let snippet = line
@@ -306,12 +333,11 @@ impl Store {
             Some(i) => rel[..i].to_string(),
             None => String::new(),
         };
-        let content = fs::read_to_string(path)?;
         Ok(NoteMeta {
             title: path.file_stem().unwrap_or_default().to_string_lossy().into_owned(),
             folder,
             modified: modified_ms(path),
-            preview: truncate(content.trim(), 200),
+            preview: None,
             path: rel,
         })
     }
@@ -383,16 +409,33 @@ fn title_from_text(text: &str) -> Option<String> {
     (!title.is_empty()).then_some(title)
 }
 
-/// `dir/stem.md`, or `dir/stem{sep}2.md`, `…3.md` if taken.
-fn unique_path(dir: &Path, stem: &str, sep: &str) -> PathBuf {
+/// `dir/stem.md`, or `dir/stem{sep}2.md`, `…3.md` if taken. The file being renamed
+/// (`from`) does not count as taken, e.g. "idea" → "Idea" on a case-insensitive disk.
+fn unique_path(dir: &Path, stem: &str, sep: &str, from: Option<&Path>) -> PathBuf {
+    let taken = |p: &Path| p.exists() && !from.is_some_and(|f| same_file(p, f));
     let first = dir.join(format!("{stem}.md"));
-    if !first.exists() {
+    if !taken(&first) {
         return first;
     }
     (2..)
         .map(|n| dir.join(format!("{stem}{sep}{n}.md")))
-        .find(|p| !p.exists())
+        .find(|p| !taken(p))
         .expect("unbounded range")
+}
+
+#[cfg(unix)]
+fn same_file(a: &Path, b: &Path) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    match (fs::metadata(a), fs::metadata(b)) {
+        (Ok(a), Ok(b)) => a.dev() == b.dev() && a.ino() == b.ino(),
+        _ => false,
+    }
+}
+
+/// Windows resolves a path to the name stored on disk, so equal canonical paths are one file.
+#[cfg(not(unix))]
+fn same_file(a: &Path, b: &Path) -> bool {
+    matches!((a.canonicalize(), b.canonicalize()), (Ok(a), Ok(b)) if a == b)
 }
 
 /// Write to a temp file in the same folder, flush to disk, then rename over the target.
@@ -467,6 +510,17 @@ fn modified_ms(path: &Path) -> i64 {
         .map_or(0, |d| d.as_millis() as i64)
 }
 
+/// Lowercase for search, with the Turkish I/İ/ı/i all folded to "i" so either spelling
+/// finds the other ("istanbul" finds "İstanbul", "ılık" finds "ILIK").
+fn fold(s: &str) -> String {
+    s.chars()
+        .flat_map(|c| match c {
+            'I' | 'İ' | 'ı' => 'i'.to_lowercase(),
+            c => c.to_lowercase(),
+        })
+        .collect()
+}
+
 fn truncate(s: &str, max_chars: usize) -> String {
     match s.char_indices().nth(max_chars) {
         Some((i, _)) => format!("{}…", &s[..i]),
@@ -497,7 +551,7 @@ mod tests {
         let meta = s.add_inbox("step motor idea", at(14, 32, 5)).unwrap();
         assert_eq!(meta.path, "Inbox/2026-10-19-143205.md");
         assert_eq!(meta.folder, "Inbox");
-        assert_eq!(s.read(&meta.path).unwrap(), "step motor idea\n");
+        assert_eq!(s.read(&meta.path).unwrap().content, "step motor idea\n");
     }
 
     #[test]
@@ -522,14 +576,24 @@ mod tests {
         let items = s.list_inbox().unwrap();
         assert_eq!(items.len(), 2);
         assert_eq!(items[0].path, "Inbox/2026-10-19-110000.md");
-        assert_eq!(items[0].preview, "newer\nsecond line");
+        assert_eq!(items[0].preview.as_deref(), Some("newer\nsecond line"));
+    }
+
+    #[test]
+    fn tree_does_not_read_previews() {
+        let (_d, s) = store();
+        s.write("Ideas/a.md", "body", None).unwrap();
+        s.write("b.md", "body", None).unwrap();
+        let t = s.tree().unwrap();
+        assert_eq!(t.folders[0].pages[0].preview, None);
+        assert_eq!(t.root_pages[0].preview, None);
     }
 
     #[test]
     fn write_is_atomic_and_round_trips() {
         let (d, s) = store();
-        s.write("Ideas/a.md", "# A\nbody").unwrap();
-        assert_eq!(s.read("Ideas/a.md").unwrap(), "# A\nbody");
+        s.write("Ideas/a.md", "# A\nbody", None).unwrap();
+        assert_eq!(s.read("Ideas/a.md").unwrap().content, "# A\nbody");
         let leftovers: Vec<_> = fs::read_dir(d.path().join("Ideas"))
             .unwrap()
             .filter_map(|e| e.ok())
@@ -539,12 +603,36 @@ mod tests {
     }
 
     #[test]
+    fn write_returns_the_new_mtime_for_the_next_save() {
+        let (_d, s) = store();
+        let first = s.write("Ideas/a.md", "v1", None).unwrap();
+        let note = s.read("Ideas/a.md").unwrap();
+        assert_eq!((note.content.as_str(), note.modified), ("v1", first));
+        let second = s.write("Ideas/a.md", "v2", Some(first)).unwrap();
+        assert_eq!(s.read("Ideas/a.md").unwrap().modified, second);
+    }
+
+    #[test]
+    fn write_refuses_to_overwrite_a_file_changed_on_disk() {
+        let (d, s) = store();
+        s.write("Ideas/a.md", "mine", None).unwrap();
+        let seen = s.read("Ideas/a.md").unwrap().modified;
+        // Another app saves the file a little later.
+        let file = d.path().join("Ideas/a.md");
+        fs::write(&file, "theirs").unwrap();
+        let later = std::time::UNIX_EPOCH + std::time::Duration::from_millis(seen as u64 + 5000);
+        fs::File::options().write(true).open(&file).unwrap().set_modified(later).unwrap();
+        assert!(matches!(s.write("Ideas/a.md", "mine again", Some(seen)), Err(StoreError::Conflict)));
+        assert_eq!(s.read("Ideas/a.md").unwrap().content, "theirs");
+    }
+
+    #[test]
     fn rejects_paths_outside_root() {
         let (_d, s) = store();
         assert!(matches!(s.read("../x.md"), Err(StoreError::InvalidPath)));
         assert!(matches!(s.read("/etc/passwd"), Err(StoreError::InvalidPath)));
-        assert!(matches!(s.write("a/../../x.md", "x"), Err(StoreError::InvalidPath)));
-        assert!(matches!(s.write("Ideas/notes.txt", "x"), Err(StoreError::InvalidPath)));
+        assert!(matches!(s.write("a/../../x.md", "x", None), Err(StoreError::InvalidPath)));
+        assert!(matches!(s.write("Ideas/notes.txt", "x", None), Err(StoreError::InvalidPath)));
     }
 
     #[cfg(unix)]
@@ -553,7 +641,7 @@ mod tests {
         let (d, s) = store();
         let outside = tempfile::tempdir().unwrap();
         std::os::unix::fs::symlink(outside.path(), d.path().join("Link")).unwrap();
-        assert!(matches!(s.write("Link/evil.md", "x"), Err(StoreError::InvalidPath)));
+        assert!(matches!(s.write("Link/evil.md", "x", None), Err(StoreError::InvalidPath)));
         assert!(!outside.path().join("evil.md").exists());
     }
 
@@ -611,14 +699,41 @@ mod tests {
     fn rename_and_move() {
         let (_d, s) = store();
         let p = s.create_page("Ideas", "Old").unwrap();
-        s.write(&p.path, "body").unwrap();
+        s.write(&p.path, "body", None).unwrap();
         let r = s.rename(&p.path, "New").unwrap();
         assert_eq!(r.path, "Ideas/New.md");
-        assert_eq!(s.read("Ideas/New.md").unwrap(), "body");
+        assert_eq!(s.read("Ideas/New.md").unwrap().content, "body");
         s.create_page("Work", "New").unwrap();
         let m = s.move_to(&r.path, "Work").unwrap();
         assert_eq!(m.path, "Work/New 2.md");
         assert!(matches!(s.read("Ideas/New.md"), Err(StoreError::NotFound)));
+    }
+
+    #[test]
+    fn move_into_current_folder_is_a_no_op() {
+        let (_d, s) = store();
+        let p = s.create_page("Ideas", "Same").unwrap();
+        assert_eq!(s.move_to(&p.path, "Ideas").unwrap().path, "Ideas/Same.md");
+        let r = s.create_page("", "Top").unwrap();
+        assert_eq!(s.move_to(&r.path, "").unwrap().path, "Top.md");
+        let n = s.add_inbox("idea", at(9, 0, 0)).unwrap();
+        assert_eq!(s.move_to(&n.path, "Inbox").unwrap().path, n.path);
+    }
+
+    /// A hard link stands in for a case-insensitive file system, where "Idea.md" already
+    /// "exists" as the very file being renamed. On a case-insensitive disk (macOS) the link
+    /// fails with AlreadyExists because that is already the case under test.
+    #[cfg(unix)]
+    #[test]
+    fn rename_onto_the_same_file_does_not_add_suffix() {
+        let (d, s) = store();
+        let p = s.create_page("Ideas", "idea").unwrap();
+        match fs::hard_link(d.path().join("Ideas/idea.md"), d.path().join("Ideas/Idea.md")) {
+            Err(e) if e.kind() != io::ErrorKind::AlreadyExists => panic!("{e}"),
+            _ => {}
+        }
+        assert_eq!(s.rename(&p.path, "Idea").unwrap().path, "Ideas/Idea.md");
+        assert!(!d.path().join("Ideas/Idea 2.md").exists());
     }
 
     #[test]
@@ -670,8 +785,8 @@ mod tests {
     #[test]
     fn search_case_insensitive_with_snippet() {
         let (_d, s) = store();
-        s.write("Ideas/Robot.md", "# Robot\nuse a Step Motor here").unwrap();
-        s.write("Work/Other.md", "nothing").unwrap();
+        s.write("Ideas/Robot.md", "# Robot\nuse a Step Motor here", None).unwrap();
+        s.write("Work/Other.md", "nothing", None).unwrap();
         s.add_inbox("step by step", at(2, 0, 0)).unwrap();
         let hits = s.search("STEP").unwrap();
         assert_eq!(hits.len(), 2);
@@ -680,12 +795,25 @@ mod tests {
     }
 
     #[test]
+    fn search_ignores_turkish_dotted_and_dotless_i() {
+        let (_d, s) = store();
+        s.write("Trips/İstanbul.md", "ILIK bir gün", None).unwrap();
+        s.write("Work/Plan.md", "Ship it", None).unwrap();
+        let titles = |q: &str| s.search(q).unwrap().into_iter().map(|h| h.title).collect::<Vec<_>>();
+        assert_eq!(titles("istanbul"), ["İstanbul"]);
+        assert_eq!(titles("İSTANBUL"), ["İstanbul"]);
+        assert_eq!(titles("ılık"), ["İstanbul"]);
+        assert_eq!(titles("ilik"), ["İstanbul"]);
+        assert_eq!(titles("SHIP"), ["Plan"]);
+    }
+
+    #[test]
     fn search_matches_title_and_limits() {
         let (_d, s) = store();
         for i in 0..60 {
-            s.write(&format!("Many/n{i}.md"), "needle").unwrap();
+            s.write(&format!("Many/n{i}.md"), "needle", None).unwrap();
         }
-        s.write("Ideas/Needle title.md", "").unwrap();
+        s.write("Ideas/Needle title.md", "", None).unwrap();
         let hits = s.search("needle").unwrap();
         assert_eq!(hits.len(), 50);
         assert!(s.search("title").unwrap().iter().any(|h| h.title == "Needle title"));

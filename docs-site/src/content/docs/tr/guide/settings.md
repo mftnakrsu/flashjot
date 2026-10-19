@@ -25,6 +25,9 @@ ettiği bir klasör. **Dosya yöneticisinde göster** mevcut klasörü açar.
 Klasörü değiştirdiğinde Flashjot mevcut notlarını taşımaz. Yeni yerde olmalarını istiyorsan kendin
 kopyala.
 
+Klasör oluşturulamıyorsa Flashjot bunu söyler ve ayarları kaydetmez. Flashjot açılırken klasör
+kullanılamıyorsa (örneğin takılı olmayan bir disk), klasör geri gelene kadar varsayılanı kullanır.
+
 ## Dil
 
 **Otomatik** sistem dilini izler. Türkçe ve İngilizce var; başka bir dil eklemek için bkz.
