@@ -3,7 +3,8 @@
 use crate::settings::{self, Settings};
 use crate::store::{Hit, Note, NoteMeta, Store, Tree};
 use crate::{shortcuts, windows};
-use std::path::PathBuf;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -16,8 +17,7 @@ pub struct AppState {
 impl AppState {
     pub fn new(settings_path: PathBuf) -> Self {
         let settings = settings::load(&settings_path);
-        let store = Store::new(notes_root(&settings));
-        let _ = store.ensure();
+        let store = open_store(notes_root(&settings), default_root());
         AppState { store: Mutex::new(store), settings: Mutex::new(settings), settings_path }
     }
 }
@@ -25,11 +25,33 @@ impl AppState {
 pub fn notes_root(s: &Settings) -> PathBuf {
     match s.notes_dir.as_deref().map(str::trim) {
         Some(dir) if !dir.is_empty() => PathBuf::from(dir),
-        _ => dirs::document_dir()
-            .or_else(dirs::home_dir)
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("Flashjot"),
+        _ => default_root(),
     }
+}
+
+fn default_root() -> PathBuf {
+    dirs::document_dir().or_else(dirs::home_dir).unwrap_or_else(|| PathBuf::from(".")).join("Flashjot")
+}
+
+/// The saved notes folder, or `fallback` if it can't be used (e.g. a removed drive).
+/// The setting is kept, so the folder is used again once it is back.
+fn open_store(root: PathBuf, fallback: PathBuf) -> Store {
+    let store = Store::new(root);
+    let Err(e) = store.ensure() else { return store };
+    eprintln!("flashjot: notes folder {} unusable ({e}), using {}", store.root().display(), fallback.display());
+    let store = Store::new(fallback);
+    if let Err(e) = store.ensure() {
+        eprintln!("flashjot: notes folder {}: {e}", store.root().display());
+    }
+    store
+}
+
+/// Creates the notes folder first, so a folder that can't be created is never saved.
+fn save_with_notes_dir(settings_path: &Path, settings: &Settings) -> io::Result<Store> {
+    let store = Store::new(notes_root(settings));
+    store.ensure()?;
+    settings::save(settings_path, settings)?;
+    Ok(store)
 }
 
 type CmdResult<T> = Result<T, String>;
@@ -132,13 +154,10 @@ pub fn get_settings(state: State<AppState>) -> CmdResult<Settings> {
 /// Returns human-readable problems (e.g. a shortcut taken by another app); empty = all good.
 #[tauri::command]
 pub fn set_settings(app: AppHandle, state: State<AppState>, settings: Settings) -> CmdResult<Vec<String>> {
-    settings::save(&state.settings_path, &settings).map_err(|e| e.to_string())?;
-    let new_root = notes_root(&settings);
+    let next = save_with_notes_dir(&state.settings_path, &settings).map_err(|e| e.to_string())?;
     {
         let mut store = state.store.lock().map_err(|e| e.to_string())?;
-        if store.root() != new_root {
-            let next = Store::new(new_root);
-            next.ensure().map_err(|e| e.to_string())?;
+        if store.root() != next.root() {
             *store = next;
         }
     }
@@ -177,4 +196,48 @@ pub fn open_notebook(app: AppHandle, path: Option<String>) -> CmdResult<()> {
         let _ = app.emit_to(windows::NOTEBOOK, "open-note", path);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn notes_in(dir: &Path) -> Settings {
+        Settings { notes_dir: Some(dir.to_string_lossy().into_owned()), ..Settings::default() }
+    }
+
+    /// A path below a regular file can never be created.
+    fn unusable(d: &tempfile::TempDir) -> PathBuf {
+        fs::write(d.path().join("file"), "").unwrap();
+        d.path().join("file/notes")
+    }
+
+    #[test]
+    fn unusable_notes_dir_is_not_saved() {
+        let d = tempfile::tempdir().unwrap();
+        let settings_path = d.path().join("settings.json");
+        assert!(save_with_notes_dir(&settings_path, &notes_in(&unusable(&d))).is_err());
+        assert!(!settings_path.exists());
+    }
+
+    #[test]
+    fn new_notes_dir_is_created_then_saved() {
+        let d = tempfile::tempdir().unwrap();
+        let settings_path = d.path().join("settings.json");
+        let settings = notes_in(&d.path().join("notes"));
+        let store = save_with_notes_dir(&settings_path, &settings).unwrap();
+        assert_eq!(store.root(), d.path().join("notes"));
+        assert!(d.path().join("notes/Inbox").is_dir());
+        assert_eq!(settings::load(&settings_path), settings);
+    }
+
+    #[test]
+    fn startup_falls_back_when_saved_notes_dir_is_unusable() {
+        let d = tempfile::tempdir().unwrap();
+        let fallback = d.path().join("default");
+        let store = open_store(unusable(&d), fallback.clone());
+        assert_eq!(store.root(), fallback);
+        assert!(fallback.join("Inbox").is_dir());
+    }
 }
