@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Flashjot",
   "version": "0.1.0",
-  "identifier": "io.github.flashjot",
+  "identifier": "io.github.mftnakrsu.flashjot",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -27,10 +27,9 @@
     ],
     "shortDescription": "Capture ideas in a flash. Plain Markdown notes.",
     "category": "Productivity",
-    "linux": {
-      "deb": {
-        "depends": []
-      }
-    }
+    "publisher": "mftnakrsu",
+    "homepage": "https://github.com/mftnakrsu/flashjot",
+    "copyright": "\u00a9 2026 mftnakrsu. MIT License.",
+    "longDescription": "Flashjot pops up a small box on a global shortcut so you can write an idea down and get back to work. A notebook window keeps your pages and an Inbox of quick notes. Everything is stored as plain Markdown files."
   }
 }

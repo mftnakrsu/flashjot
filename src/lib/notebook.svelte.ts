@@ -13,7 +13,7 @@ export interface Toast {
   id: number;
   message: string;
   tone: "info" | "error";
-  action?: { label: string; run: () => void };
+  action?: { label: string; run: () => void | Promise<void> };
 }
 
 export type Dialog =

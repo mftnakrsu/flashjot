@@ -49,14 +49,14 @@ pub fn toggle_quick(app: &AppHandle) {
 pub fn show_quick(app: &AppHandle) {
     let Some(win) = app.get_webview_window(QUICK) else { return };
     // Centre horizontally in the upper third of the monitor under the mouse.
-    if let Ok(cursor) = app.cursor_position() {
-        if let Ok(Some(monitor)) = app.monitor_from_point(cursor.x, cursor.y) {
-            let scale = monitor.scale_factor();
-            let (mx, my) = (monitor.position().x, monitor.position().y);
-            let (mw, mh) = (monitor.size().width as i32, monitor.size().height as i32);
-            let w = (QUICK_W * scale) as i32;
-            let _ = win.set_position(PhysicalPosition::new(mx + (mw - w) / 2, my + mh / 4));
-        }
+    if let Ok(cursor) = app.cursor_position()
+        && let Ok(Some(monitor)) = app.monitor_from_point(cursor.x, cursor.y)
+    {
+        let scale = monitor.scale_factor();
+        let (mx, my) = (monitor.position().x, monitor.position().y);
+        let (mw, mh) = (monitor.size().width as i32, monitor.size().height as i32);
+        let w = (QUICK_W * scale) as i32;
+        let _ = win.set_position(PhysicalPosition::new(mx + (mw - w) / 2, my + mh / 4));
     }
     present(&win);
     let _ = app.emit_to(QUICK, "quick-shown", ());

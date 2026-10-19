@@ -1,5 +1,15 @@
 <script lang="ts">
   import { nb } from "$lib/notebook.svelte";
+
+  async function runAction() {
+    const action = nb.toast?.action; // read before clearing the toast
+    nb.toast = null;
+    try {
+      await action?.run();
+    } catch (e) {
+      nb.error(e);
+    }
+  }
 </script>
 
 <div class="slot" aria-live="polite">
@@ -7,13 +17,7 @@
     <div class="toast" class:error={nb.toast.tone === "error"} role={nb.toast.tone === "error" ? "alert" : "status"}>
       <span>{nb.toast.message}</span>
       {#if nb.toast.action}
-        {@const action = nb.toast.action}
-        <button
-          onclick={() => {
-            nb.toast = null;
-            action.run();
-          }}>{action.label}</button
-        >
+        <button onclick={runAction}>{nb.toast.action.label}</button>
       {/if}
     </div>
   {/if}

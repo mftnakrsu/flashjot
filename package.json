@@ -1,7 +1,7 @@
 {
   "name": "flashjot",
   "version": "0.1.0",
-  "description": "",
+  "description": "Capture ideas in a flash. Plain Markdown notes with a global quick-capture box.",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -10,7 +10,8 @@
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "cd src-tauri && cargo test"
   },
   "license": "MIT",
   "dependencies": {
@@ -37,5 +38,6 @@
     "svelte-check": "^4.6.0",
     "typescript": "~6.0.3",
     "vite": "^8.0.16"
-  }
+  },
+  "repository": "github:mftnakrsu/flashjot"
 }
