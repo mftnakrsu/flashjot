@@ -1,0 +1,128 @@
+---
+title: Capture ideas in a flash
+description: Flashjot is a free, open-source quick-capture box and notebook for Linux, Windows and macOS. Press a shortcut, write the idea down, press Enter. Notes are plain Markdown files.
+template: splash
+hero:
+  title: Write the idea down before it's gone
+  tagline: "Press Ctrl+Alt+N anywhere, type, press Enter. Flashjot saves the thought to your Inbox and gets out of the way. A notebook keeps everything else, as plain Markdown files."
+  actions:
+    - text: Download
+      link: /install/linux/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/mftnakrsu/flashjot
+      icon: github
+      variant: secondary
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+<video
+  class="demo-video"
+  controls
+  muted
+  loop
+  playsinline
+  autoplay
+  preload="metadata"
+  poster="/media/flashjot-demo-en-poster.png"
+  src="/media/flashjot-demo-en.mp4"
+  aria-label="Flashjot demo: the quick box opens with a shortcut, a note is typed and saved, then filed from the Inbox into a folder in the notebook"
+>
+  Your browser can't play this video. <a href="/media/flashjot-demo-en.mp4">Download the demo video</a> (MP4).
+</video>
+
+## What Flashjot does
+
+Ideas show up at bad times: in the middle of a build, a meeting or a sentence. Opening a full
+note app breaks your flow, and by the time it has loaded the idea is gone. Flashjot keeps a capture
+box one shortcut away, and a notebook for when you have time to sort things out.
+
+<CardGrid>
+  <Card title="A box one shortcut away" icon="pencil">
+    `Ctrl+Alt+N` opens a small box on the monitor your mouse is on, with the cursor already in it.
+    `Enter` saves. See [Quick capture](/guide/quick-capture/).
+  </Card>
+  <Card title="Drafts never get lost" icon="approve-check">
+    Press `Esc` or click somewhere else, and whatever you typed is still there next time. Saved
+    notes are written so that a power cut can't leave a half-written file.
+  </Card>
+  <Card title="An Inbox to sort later" icon="list-format">
+    Quick notes land in the Inbox as cards. Press `M` to file one into a folder and it gets a title
+    from its first line.
+  </Card>
+  <Card title="A notebook with folders" icon="open-book">
+    Pages in folders, a Markdown editor with live styling and clickable checkboxes, and search
+    across everything with `Ctrl+K`. See [Notebook](/guide/notebook/).
+  </Card>
+  <Card title="Plain Markdown files" icon="document">
+    Every note is a `.md` file in `Documents/Flashjot`. Open them in Obsidian, VS Code or any
+    editor, and keep them in git or a synced folder. See [Your notes](/guide/your-notes/).
+  </Card>
+  <Card title="Keyboard first" icon="laptop">
+    Every action has a shortcut, and you can record your own global shortcuts in Settings. See
+    [Shortcuts](/guide/shortcuts/).
+  </Card>
+  <Card title="Linux, Windows and macOS" icon="rocket">
+    Built with Tauri: it uses the system's web view instead of shipping a browser, so the installer
+    is about 3 MB. Starts in the tray, ready when you are.
+  </Card>
+  <Card title="English and Turkish, light and dark" icon="translate">
+    The interface follows your system language and light or dark setting. You can change both in
+    Settings.
+  </Card>
+</CardGrid>
+
+<div class="screens">
+  <img
+    class="shot"
+    src="/screenshots/quick-en.png"
+    alt="The quick box over the desktop: a white card with a red rule under the Flashjot title and the text “Try a belt drive for the shoulder joint”"
+    width="1600"
+    height="900"
+    loading="lazy"
+  />
+  <img
+    class="shot"
+    src="/screenshots/inbox-en.png"
+    alt="The notebook's Inbox: three quick notes as cards with red top rules, folders Ideas and Work in the sidebar"
+    width="2160"
+    height="1350"
+    loading="lazy"
+  />
+</div>
+
+## Get it
+
+Download the installer for your system from the
+[latest release](https://github.com/mftnakrsu/flashjot/releases/latest). It is free and has no
+account, no telemetry and no network access: your notes never leave your computer.
+
+<CardGrid>
+  <LinkCard
+    title="Linux"
+    description=".deb for Ubuntu, Debian, Pardus and Mint, .rpm for Fedora, and an AppImage for everything else."
+    href="/install/linux/"
+  />
+  <LinkCard title="Windows" description="Installer for Windows 10 and 11." href="/install/windows/" />
+  <LinkCard title="macOS" description="Disk images for Apple Silicon and Intel Macs." href="/install/macos/" />
+</CardGrid>
+
+## Built in the open
+
+Flashjot is free software under the MIT License. The code, the issues and the plans are on
+[GitHub](https://github.com/mftnakrsu/flashjot). Contributions are welcome, from typo fixes and
+translations to new features.
+
+<CardGrid>
+  <LinkCard
+    title="Contributing"
+    description="Set up the project, run the checks and open a pull request."
+    href="/development/contributing/"
+  />
+  <LinkCard
+    title="Roadmap"
+    description="What comes next, such as SQLite storage and Wayland shortcuts."
+    href="/roadmap/"
+  />
+</CardGrid>
