@@ -54,7 +54,9 @@ pub struct NoteMeta {
     pub folder: String,
     /// Modification time, milliseconds since the Unix epoch.
     pub modified: i64,
-    pub preview: String,
+    /// Start of the text; only read for the Inbox list, where it is shown.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preview: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -113,6 +115,10 @@ impl Store {
 
     pub fn list_inbox(&self) -> Result<Vec<NoteMeta>, StoreError> {
         let mut items = self.pages_in(&self.root.join(INBOX))?;
+        for item in &mut items {
+            let content = fs::read_to_string(self.root.join(&item.path))?;
+            item.preview = Some(truncate(content.trim(), 200));
+        }
         // Names are timestamps, so a reverse sort on the stem is newest first
         // ("…143205-2" sorts above "…143205").
         items.sort_by(|a, b| b.title.cmp(&a.title));
@@ -327,12 +333,11 @@ impl Store {
             Some(i) => rel[..i].to_string(),
             None => String::new(),
         };
-        let content = fs::read_to_string(path)?;
         Ok(NoteMeta {
             title: path.file_stem().unwrap_or_default().to_string_lossy().into_owned(),
             folder,
             modified: modified_ms(path),
-            preview: truncate(content.trim(), 200),
+            preview: None,
             path: rel,
         })
     }
@@ -571,7 +576,17 @@ mod tests {
         let items = s.list_inbox().unwrap();
         assert_eq!(items.len(), 2);
         assert_eq!(items[0].path, "Inbox/2026-10-19-110000.md");
-        assert_eq!(items[0].preview, "newer\nsecond line");
+        assert_eq!(items[0].preview.as_deref(), Some("newer\nsecond line"));
+    }
+
+    #[test]
+    fn tree_does_not_read_previews() {
+        let (_d, s) = store();
+        s.write("Ideas/a.md", "body", None).unwrap();
+        s.write("b.md", "body", None).unwrap();
+        let t = s.tree().unwrap();
+        assert_eq!(t.folders[0].pages[0].preview, None);
+        assert_eq!(t.root_pages[0].preview, None);
     }
 
     #[test]

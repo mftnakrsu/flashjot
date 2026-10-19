@@ -7,7 +7,8 @@ export interface NoteMeta {
   title: string;
   folder: string;
   modified: number;
-  preview: string;
+  /** Only set by listInbox. */
+  preview?: string;
 }
 
 export interface Note {
