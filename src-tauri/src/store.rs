@@ -111,7 +111,7 @@ impl Store {
     pub fn tree(&self) -> Result<Tree, StoreError> {
         let mut folders = Vec::new();
         let mut dirs = Vec::new();
-        collect_dirs(&self.root, &self.root, &mut dirs)?;
+        collect_dirs(&self.root, &mut dirs)?;
         for dir in dirs {
             let name = rel_string(&self.root, &dir);
             if name == INBOX {
@@ -174,10 +174,9 @@ impl Store {
         fs::create_dir_all(&dir)?;
         let mut stem = from.file_stem().unwrap_or_default().to_string_lossy().into_owned();
         // Quick notes are named by timestamp; once filed they get a readable title.
-        if from.parent() == Some(&self.root.join(INBOX)) && dir != self.root.join(INBOX) {
-            if let Some(title) = title_from_text(&fs::read_to_string(&from)?) {
-                stem = title;
-            }
+        let from_inbox = from.parent() == Some(&self.root.join(INBOX)) && dir != self.root.join(INBOX);
+        if from_inbox && let Some(title) = title_from_text(&fs::read_to_string(&from)?) {
+            stem = title;
         }
         let to = unique_path(&dir, &stem, " ");
         fs::rename(&from, &to)?;
@@ -229,7 +228,7 @@ impl Store {
                 .unwrap_or_default();
             hits.push((modified_ms(&path), Hit { path: rel_string(&self.root, &path), title, snippet }));
         }
-        hits.sort_by(|a, b| b.0.cmp(&a.0));
+        hits.sort_by_key(|h| std::cmp::Reverse(h.0));
         Ok(hits.into_iter().take(50).map(|(_, h)| h).collect())
     }
 
@@ -421,14 +420,14 @@ fn is_hidden(path: &Path) -> bool {
     path.file_name().unwrap_or_default().to_string_lossy().starts_with('.')
 }
 
-fn collect_dirs(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> io::Result<()> {
+fn collect_dirs(dir: &Path, out: &mut Vec<PathBuf>) -> io::Result<()> {
     for entry in fs::read_dir(dir)?.flatten() {
         let path = entry.path();
         // file_type() does not follow symlinks: skips links out of the root and loops.
         let is_dir = entry.file_type().is_ok_and(|t| t.is_dir());
         if is_dir && !is_hidden(&path) {
             out.push(path.clone());
-            collect_dirs(root, &path, out)?;
+            collect_dirs(&path, out)?;
         }
     }
     Ok(())

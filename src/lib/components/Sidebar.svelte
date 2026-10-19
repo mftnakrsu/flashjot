@@ -159,6 +159,11 @@
 
   .search:focus-within {
     border-color: var(--ink);
+    box-shadow: 0 0 0 1px var(--ink);
+  }
+
+  .search input:focus-visible {
+    box-shadow: none;
   }
 
   .search input {

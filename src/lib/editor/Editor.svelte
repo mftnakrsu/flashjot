@@ -56,7 +56,10 @@
   }
 
   $effect(() => {
-    if (view && path !== loadedPath) load(path);
+    // Read `path` unconditionally so the effect always tracks it; a short-circuit
+    // before it would leave the effect with no dependencies and stop page switching.
+    const next = path;
+    if (view && next !== loadedPath) load(next);
   });
 
   onMount(() => {

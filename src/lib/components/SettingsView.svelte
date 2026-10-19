@@ -176,6 +176,7 @@
   }
 
   .hint {
+    font-variant-ligatures: none; /* keep "--quick" from becoming an en dash */
     margin: 8px 0 0;
     color: var(--muted);
     font-size: var(--step--1);
