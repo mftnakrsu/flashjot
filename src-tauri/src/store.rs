@@ -354,7 +354,7 @@ fn unique_path(dir: &Path, stem: &str, sep: &str) -> PathBuf {
 }
 
 /// Write to a temp file in the same folder, flush to disk, then rename over the target.
-fn atomic_write(path: &Path, content: &str) -> io::Result<()> {
+pub(crate) fn atomic_write(path: &Path, content: &str) -> io::Result<()> {
     let mut tmp = path.as_os_str().to_owned();
     tmp.push(".tmp");
     let tmp = PathBuf::from(tmp);
