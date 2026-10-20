@@ -7,6 +7,7 @@
   import { nb } from "$lib/notebook.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import InboxView from "$lib/components/InboxView.svelte";
+  import TasksView from "$lib/components/TasksView.svelte";
   import PageView from "$lib/components/PageView.svelte";
   import SettingsView from "$lib/components/SettingsView.svelte";
   import Dialogs from "$lib/components/Dialogs.svelte";
@@ -72,6 +73,8 @@
       <InboxView />
     {:else if nb.view.kind === "page"}
       <PageView path={nb.view.path} />
+    {:else if nb.view.kind === "tasks"}
+      <TasksView />
     {:else if nb.view.kind === "settings"}
       <SettingsView />
     {:else}
