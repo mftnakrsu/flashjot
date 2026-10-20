@@ -85,6 +85,21 @@ pub struct Hit {
     pub snippet: String,
 }
 
+#[derive(Debug, Serialize, PartialEq)]
+pub struct Task {
+    /// 0-based line in the file; with `text`, identifies the task for `set_task`.
+    pub line: usize,
+    pub text: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TaskGroup {
+    pub path: String,
+    pub title: String,
+    pub modified: i64,
+    pub tasks: Vec<Task>,
+}
+
 pub struct Store {
     root: PathBuf,
 }
@@ -285,6 +300,45 @@ impl Store {
         Ok(hits.into_iter().take(50).map(|(_, h)| h).collect())
     }
 
+    /// Every page with unchecked tasks: `first` (the Tasks page) first, then newest first.
+    pub fn open_tasks(&self, first: Option<&str>) -> Result<Vec<TaskGroup>, StoreError> {
+        let mut files = Vec::new();
+        collect_md(&self.root, &mut files)?;
+        let mut groups = Vec::new();
+        for path in files {
+            let tasks = open_tasks_in(&fs::read_to_string(&path).unwrap_or_default());
+            if tasks.is_empty() {
+                continue;
+            }
+            let meta = self.meta(&path)?;
+            groups.push(TaskGroup { path: meta.path, title: meta.title, modified: meta.modified, tasks });
+        }
+        groups.sort_by_key(|g| (Some(g.path.as_str()) != first, std::cmp::Reverse(g.modified)));
+        Ok(groups)
+    }
+
+    /// Ticks (`done`) or unticks the task on `line`. Refuses with `Conflict` unless that line is
+    /// still the open (or done) task with this `text`, e.g. after the file changed elsewhere.
+    pub fn set_task(&self, rel: &str, line: usize, text: &str, done: bool) -> Result<(), StoreError> {
+        let path = self.existing(rel)?;
+        let content = fs::read_to_string(&path)?;
+        // split_inclusive keeps each line's own ending ("\n" or "\r\n").
+        let mut lines: Vec<&str> = content.split_inclusive('\n').collect();
+        let current = *lines.get(line).ok_or(StoreError::Conflict)?;
+        let trimmed = current.trim_start();
+        let indent = &current[..current.len() - trimmed.len()];
+        let bullet = trimmed.chars().next().filter(|c| matches!(c, '-' | '*' | '+')).ok_or(StoreError::Conflict)?;
+        let boxes: &[&str] = if done { &[" [ ] "] } else { &[" [x] ", " [X] "] };
+        let rest = boxes.iter().find_map(|b| trimmed[1..].strip_prefix(b)).ok_or(StoreError::Conflict)?;
+        if rest.trim() != text {
+            return Err(StoreError::Conflict);
+        }
+        let updated = format!("{indent}{bullet} [{}] {rest}", if done { "x" } else { " " });
+        lines[line] = &updated;
+        atomic_write(&path, &lines.concat())?;
+        Ok(())
+    }
+
     // ---- helpers ----
 
     /// Resolve a UI-supplied relative `.md` path to an absolute path inside the root.
@@ -418,6 +472,34 @@ pub fn parse_tasks(text: &str) -> Option<Vec<String>> {
         })
         .collect();
     Some(tasks)
+}
+
+/// Unchecked task lines ("- [ ] text", also with * or + and indentation), skipping fenced code.
+pub fn open_tasks_in(text: &str) -> Vec<Task> {
+    let mut out = Vec::new();
+    let mut fence: Option<&str> = None;
+    for (line, raw) in text.lines().enumerate() {
+        let trimmed = raw.trim_start();
+        if let Some(f) = fence {
+            if trimmed.starts_with(f) {
+                fence = None;
+            }
+            continue;
+        }
+        if let Some(f) = ["```", "~~~"].into_iter().find(|f| trimmed.starts_with(f)) {
+            fence = Some(f);
+            continue;
+        }
+        if let Some(text) = task_text(trimmed) {
+            out.push(Task { line, text: text.to_string() });
+        }
+    }
+    out
+}
+
+fn task_text(trimmed: &str) -> Option<&str> {
+    let rest = trimmed.strip_prefix(['-', '*', '+'])?.strip_prefix(" [ ] ")?.trim();
+    (!rest.is_empty()).then_some(rest)
 }
 
 /// A file-name-safe title from the first non-empty line: Markdown markers and characters
@@ -916,5 +998,51 @@ mod tests {
     fn add_tasks_rejects_an_empty_list() {
         let (_d, s) = store();
         assert!(matches!(s.add_tasks(None, "Tasks", &[]), Err(StoreError::Empty)));
+    }
+
+    #[test]
+    fn open_tasks_in_finds_unchecked_tasks_outside_code() {
+        let text = "# T\n- [ ] one\n  * [ ] nested\n+ [ ] plus\n- [x] done\n- [X] done too\n```\n- [ ] in code\n```\n~~~\n- [ ] tilde code\n~~~\n- [ ]   \n-[ ] no space\n- [ ] last";
+        let tasks = open_tasks_in(text);
+        let got: Vec<(usize, &str)> = tasks.iter().map(|t| (t.line, t.text.as_str())).collect();
+        assert_eq!(got, [(1, "one"), (2, "nested"), (3, "plus"), (14, "last")]);
+    }
+
+    #[test]
+    fn open_tasks_groups_by_page_with_the_tasks_page_first() {
+        let (d, s) = store();
+        fs::create_dir_all(d.path().join("Work")).unwrap();
+        fs::write(d.path().join("Work/Plan.md"), "- [ ] ship\n").unwrap();
+        fs::write(d.path().join("Tasks.md"), "- [ ] milk\n- [x] bread\n").unwrap();
+        fs::write(d.path().join("Notes.md"), "no tasks here\n").unwrap();
+        fs::create_dir_all(d.path().join(".trash")).unwrap();
+        fs::write(d.path().join(".trash/Old.md"), "- [ ] deleted\n").unwrap();
+        let groups = s.open_tasks(Some("Tasks.md")).unwrap();
+        let paths: Vec<&str> = groups.iter().map(|g| g.path.as_str()).collect();
+        assert_eq!(paths, ["Tasks.md", "Work/Plan.md"]);
+        assert_eq!(groups[0].tasks, [Task { line: 0, text: "milk".into() }]);
+        assert_eq!(groups[1].title, "Plan");
+    }
+
+    #[test]
+    fn set_task_ticks_and_unticks_the_right_line() {
+        let (d, s) = store();
+        let p = d.path().join("Tasks.md");
+        fs::write(&p, "- [ ] a\r\n  - [ ] b\n- [ ] c").unwrap();
+        s.set_task("Tasks.md", 1, "b", true).unwrap();
+        assert_eq!(fs::read_to_string(&p).unwrap(), "- [ ] a\r\n  - [x] b\n- [ ] c");
+        s.set_task("Tasks.md", 1, "b", false).unwrap();
+        s.set_task("Tasks.md", 2, "c", true).unwrap();
+        assert_eq!(fs::read_to_string(&p).unwrap(), "- [ ] a\r\n  - [ ] b\n- [x] c");
+    }
+
+    #[test]
+    fn set_task_refuses_when_the_line_changed() {
+        let (d, s) = store();
+        fs::write(d.path().join("Tasks.md"), "- [ ] a\n- [ ] b\n").unwrap();
+        assert!(matches!(s.set_task("Tasks.md", 0, "b", true), Err(StoreError::Conflict)));
+        assert!(matches!(s.set_task("Tasks.md", 9, "a", true), Err(StoreError::Conflict)));
+        assert!(matches!(s.set_task("Tasks.md", 0, "a", false), Err(StoreError::Conflict)), "already open");
+        assert!(matches!(s.set_task("../x.md", 0, "a", true), Err(StoreError::InvalidPath)));
     }
 }
