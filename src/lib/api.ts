@@ -93,6 +93,7 @@ export const onNotesChanged = (cb: () => void): Promise<UnlistenFn> => listen("n
 export const onSettingsChanged = (cb: () => void): Promise<UnlistenFn> => listen("settings-changed", cb);
 
 export const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
+export const isLinux = typeof navigator !== "undefined" && /Linux/i.test(navigator.userAgent);
 
 /** "CommandOrControl+Alt+N" → "⌘⌥N" on macOS, "Ctrl+Alt+N" elsewhere. */
 export function prettyShortcut(accel: string): string {

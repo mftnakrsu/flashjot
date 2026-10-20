@@ -9,6 +9,7 @@ Run this on each OS before a release. Use a scratch notes folder (Settings → N
 - [ ] Type something, press `Esc`, reopen: the draft is still there. Do the same after clicking another window.
 - [ ] Press the shortcut while the box is focused: it hides.
 - [ ] Empty text + `Enter`: nothing is saved.
+- [ ] Type, then `Ctrl/⌘+Z` removes it and `Ctrl/⌘+Shift+Z` brings it back. Same in a page title.
 - [ ] `[] süt` + Enter shows "Added to Tasks" / "Görevlere eklendi"; the Tasks page has `- [ ] süt`.
 - [ ] `[] a`, Shift+Enter, `b` adds two tasks; plain text still goes to the Inbox.
 - [ ] Only `[]` + Enter saves nothing and keeps the box open.
