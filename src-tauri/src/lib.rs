@@ -83,6 +83,8 @@ pub fn run() {
             commands::trash_note,
             commands::restore_note,
             commands::search_notes,
+            commands::open_tasks,
+            commands::set_task,
             commands::get_settings,
             commands::set_settings,
             commands::notes_dir,
