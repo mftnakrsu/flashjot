@@ -61,6 +61,13 @@ Gelen kutusundan çıkan bir hızlı not, ilk satırından okunabilir bir ad al�
 tahrik dene” notu `Fikirler/Omuz eklemi için kayış tahrik dene.md` olur; baştaki `#` ya da `- [ ]`
 gibi Markdown işaretleri atılır.
 
+## Açık görevler
+
+Kenar çubuğundaki **Açık görevler**, tüm notlarındaki işaretlenmemiş görevleri (`- [ ]`) sayfalara
+göre gruplu listeler; Görevler sayfası en üsttedir. Bir görevi işaretleyince dosyasında da
+tamamlanır; görünümden çıkana kadar üstü çizili olarak listede kalır, ikinci tıklama geri alır.
+Bir göreve ya da sayfa adına tıklayınca sayfa açılır. Kod bloklarının içindeki görevler sayılmaz.
+
 ## Sayfalar ve klasörler
 
 - **Yeni sayfa:** <kbd>Ctrl</kbd>+<kbd>N</kbd>, **Yeni sayfa** düğmesi ya da bir klasörün yanındaki
