@@ -15,6 +15,8 @@ pub struct Settings {
     /// "auto", "en" or "tr".
     pub language: String,
     pub launch_at_login: bool,
+    /// The Tasks page, relative to the notes folder; set when the first task is added.
+    pub tasks_page: Option<String>,
 }
 
 impl Default for Settings {
@@ -25,6 +27,7 @@ impl Default for Settings {
             notebook_shortcut: "CommandOrControl+Alt+D".into(),
             language: "auto".into(),
             launch_at_login: true,
+            tasks_page: None,
         }
     }
 }
@@ -75,6 +78,14 @@ mod tests {
         let s = load(&p);
         assert_eq!(s.language, "tr");
         assert_eq!(s.quick_shortcut, "CommandOrControl+Alt+N");
+    }
+
+    #[test]
+    fn old_settings_files_get_no_tasks_page() {
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("settings.json");
+        fs::write(&p, r#"{"language":"tr"}"#).unwrap();
+        assert_eq!(load(&p).tasks_page, None);
     }
 
     #[test]

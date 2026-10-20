@@ -70,7 +70,7 @@ kullanırlar; hızlı kutu yine anında açılır.
 - **KDE Plasma:** Sistem Ayarları → Klavye → Kısayollar → Yeni Ekle → Komut ya da Betik.
 
 AppImage kurduysan `flashjot` yerine dosyanın tam yolunu kullan; örneğin
-`/home/sen/Uygulamalar/Flashjot_0.1.1_amd64.AppImage --quick`.
+`/home/sen/Uygulamalar/Flashjot_0.2.0_amd64.AppImage --quick`.
 
 Hangi oturumda olduğunu görmek için `echo $XDG_SESSION_TYPE` çalıştır.
 

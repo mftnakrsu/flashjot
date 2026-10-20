@@ -9,12 +9,10 @@ approach. Issues labelled
 [`good first issue`](https://github.com/mftnakrsu/flashjot/labels/good%20first%20issue) are small and
 self-contained.
 
-## Next: v0.2
+## Done in 0.2
 
-- **Quick tasks.** Capture a to-do from the quick box as a `- [ ]` task on a Tasks page; the
-  trigger is still open for discussion ([#18](https://github.com/mftnakrsu/flashjot/issues/18)).
-- **Open tasks view.** Every unchecked task across all notes in one list, ticked off in place
-  ([#19](https://github.com/mftnakrsu/flashjot/issues/19)).
+Quick tasks from the quick box ([#18](https://github.com/mftnakrsu/flashjot/issues/18)) and the
+Open tasks view ([#19](https://github.com/mftnakrsu/flashjot/issues/19)).
 
 ## Planned
 

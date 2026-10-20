@@ -1,10 +1,11 @@
 //! Tauri commands called from the frontend. Thin wrappers around `store` and `settings`.
 
 use crate::settings::{self, Settings};
-use crate::store::{Hit, Note, NoteMeta, Store, Tree};
+use crate::store::{self, Hit, Note, NoteMeta, Store, TaskGroup, Tree};
 use crate::{shortcuts, windows};
 use std::io;
 use std::path::{Path, PathBuf};
+use serde::Serialize;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -71,12 +72,38 @@ fn with_store<T>(
     f(&store).map_err(|e| e.to_string())
 }
 
+/// What the quick box saved: an Inbox note, or tasks (text starting with "[]") on the Tasks page.
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum QuickSaved {
+    Note { path: String },
+    Tasks { path: String, count: usize },
+}
+
+/// `tasks_title` is the Tasks page title in the UI language, used when the page is first created.
 #[tauri::command]
-pub fn add_quick_note(app: AppHandle, state: State<AppState>, text: String) -> CmdResult<NoteMeta> {
-    let now = chrono::Local::now().naive_local();
-    let meta = with_store(&state, |s| s.add_inbox(&text, now))?;
+pub fn add_quick_note(app: AppHandle, state: State<AppState>, text: String, tasks_title: String) -> CmdResult<QuickSaved> {
+    let saved = match store::parse_tasks(&text) {
+        None => {
+            let now = chrono::Local::now().naive_local();
+            let meta = with_store(&state, |s| s.add_inbox(&text, now))?;
+            QuickSaved::Note { path: meta.path }
+        }
+        // Only "[]": nothing to save, the box stays open.
+        Some(tasks) if tasks.is_empty() => return Ok(QuickSaved::Tasks { path: String::new(), count: 0 }),
+        Some(tasks) => {
+            let stored = state.settings.lock().map_err(|e| e.to_string())?.tasks_page.clone();
+            let path = with_store(&state, |s| s.add_tasks(stored.as_deref(), &tasks_title, &tasks))?;
+            if stored.as_deref() != Some(path.as_str()) {
+                let mut settings = state.settings.lock().map_err(|e| e.to_string())?;
+                settings.tasks_page = Some(path.clone());
+                settings::save(&state.settings_path, &settings).map_err(|e| e.to_string())?;
+            }
+            QuickSaved::Tasks { path, count: tasks.len() }
+        }
+    };
     changed(&app);
-    Ok(meta)
+    Ok(saved)
 }
 
 #[tauri::command(async)]
@@ -148,6 +175,19 @@ pub fn search_notes(state: State<AppState>, query: String) -> CmdResult<Vec<Hit>
     with_store(&state, |s| s.search(&query))
 }
 
+#[tauri::command(async)]
+pub fn open_tasks(state: State<AppState>) -> CmdResult<Vec<TaskGroup>> {
+    let first = state.settings.lock().map_err(|e| e.to_string())?.tasks_page.clone();
+    with_store(&state, |s| s.open_tasks(first.as_deref()))
+}
+
+#[tauri::command(async)]
+pub fn set_task(app: AppHandle, state: State<AppState>, path: String, line: usize, text: String, done: bool) -> CmdResult<()> {
+    with_store(&state, |s| s.set_task(&path, line, &text, done))?;
+    changed(&app);
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_settings(state: State<AppState>) -> CmdResult<Settings> {
     Ok(state.settings.lock().map_err(|e| e.to_string())?.clone())
@@ -156,7 +196,9 @@ pub fn get_settings(state: State<AppState>) -> CmdResult<Settings> {
 /// Saves settings, re-registers shortcuts and autostart, switches the notes folder.
 /// Returns human-readable problems (e.g. a shortcut taken by another app); empty = all good.
 #[tauri::command]
-pub fn set_settings(app: AppHandle, state: State<AppState>, settings: Settings) -> CmdResult<Vec<String>> {
+pub fn set_settings(app: AppHandle, state: State<AppState>, mut settings: Settings) -> CmdResult<Vec<String>> {
+    // The UI never edits the Tasks page; keep the stored one.
+    settings.tasks_page = state.settings.lock().map_err(|e| e.to_string())?.tasks_page.clone();
     let next = save_with_notes_dir(&state.settings_path, &settings).map_err(|e| e.to_string())?;
     let new_root = {
         let mut store = state.store.lock().map_err(|e| e.to_string())?;

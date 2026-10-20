@@ -28,6 +28,13 @@ Not artık notlarının `Inbox` klasöründe, kaydettiğin saatin adını taşı
 `Inbox/2026-10-19-143205.md`. Defterdeki [Gelen kutusunda](/tr/guide/notebook/#gelen-kutusu) hemen
 görünür.
 
+## Görevler
+
+Not yerine görev eklemek için metne `[]` (ya da `[ ]`) ile başla ve Enter'a bas. Her satır bir
+görev olur: `[] süt`, Shift+Enter, `ekmek` iki görev ekler. Görevler not klasörünün en üstündeki
+**Görevler** sayfasına sıradan Markdown kutucukları olarak eklenir (`- [ ] süt`). Sayfa ilk
+görevle oluşturulur. Adını değiştirir ya da taşırsan Flashjot yeni bir sayfa açar.
+
 ## Kaydetmeden kapat
 
 <kbd>Esc</kbd>'ye bas, kısayola tekrar bas ya da kutunun dışına tıkla. Kutu kapanır ama **yazdığın

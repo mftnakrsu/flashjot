@@ -9,6 +9,7 @@
 
   let text = $state(readDraft());
   let status = $state<"idle" | "saving" | "saved" | "error">("idle");
+  let savedAs = $state<"note" | "tasks">("note");
   let notebookKey = $state(prettyShortcut("CommandOrControl+Alt+D"));
   let box: HTMLTextAreaElement;
   // Hide on blur only after the box really had focus: some desktops (no WM, strict focus
@@ -44,10 +45,15 @@
   }
 
   async function save() {
-    if (!text.trim() || status === "saving") return;
+    if (!text.trim() || status === "saving" || status === "saved") return;
     status = "saving";
     try {
-      await addQuickNote(text);
+      const saved = await addQuickNote(text, t("tasks.pageTitle"));
+      if (saved.kind === "tasks" && saved.count === 0) {
+        status = "idle";
+        return;
+      }
+      savedAs = saved.kind;
       text = "";
       status = "saved";
       setTimeout(async () => {
@@ -60,6 +66,10 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
+    if (status === "saving" || status === "saved") {
+      e.preventDefault();
+      return;
+    }
     if (e.isComposing) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -114,16 +124,17 @@
     placeholder={status === "saved" ? "" : t("quick.placeholder")}
     aria-label={t("quick.placeholder")}
     spellcheck="true"
-    disabled={status === "saving"}
+    readonly={status === "saving" || status === "saved"}
   ></textarea>
 
   <footer>
     {#if status === "saved"}
-      <span class="msg ok" role="status">✓ {t("quick.saved")}</span>
+      <span class="msg ok" role="status">✓ {t(savedAs === "tasks" ? "quick.savedTasks" : "quick.saved")}</span>
     {:else if status === "error"}
       <span class="msg bad" role="alert">{t("quick.error")}</span>
     {:else}
       <span class="hints">
+        <span><kbd>[]</kbd> {t("quick.task")}</span>
         <span><kbd>↵</kbd> {t("quick.save")}</span>
         <span><kbd>⇧↵</kbd> {t("quick.newline")}</span>
         <span><kbd>Esc</kbd> {t("quick.close")}</span>

@@ -28,6 +28,13 @@ The note is now a file in the `Inbox` folder of your notes, named after the time
 for example `Inbox/2026-10-19-143205.md`. It shows up in the notebook's
 [Inbox](/guide/notebook/#the-inbox) straight away.
 
+## Tasks
+
+Start the text with `[]` (or `[ ]`) and press Enter to add tasks instead of a note. Every line
+becomes one task, so `[] milk`, then Shift+Enter, then `bread` adds two. Tasks go to the
+**Tasks** page at the top of your notes folder as ordinary Markdown checkboxes (`- [ ] milk`).
+The page is created with the first task. If you rename or move it, Flashjot starts a new one.
+
 ## Close without saving
 
 Press <kbd>Esc</kbd>, press the shortcut again, or click outside the box. It closes, but **your

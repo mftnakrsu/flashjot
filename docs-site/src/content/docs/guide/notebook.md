@@ -60,6 +60,13 @@ A quick note that leaves the Inbox gets a readable name from its first line. “
 the shoulder joint” becomes `Ideas/Try a belt drive for the shoulder joint.md`, and Markdown marks
 such as `#` or `- [ ]` at the start are dropped.
 
+## Open tasks
+
+**Open tasks** in the sidebar lists every unchecked task (`- [ ]`) in all your notes, grouped by
+page, with the Tasks page first. Tick a task to mark it done in its file; it stays on the list,
+struck through, until you leave the view, so a second click undoes it. Click a task or a page
+title to open the page. Tasks inside code blocks are ignored.
+
 ## Pages and folders
 
 - **New page:** <kbd>Ctrl</kbd>+<kbd>N</kbd>, the **New page** button, or the page icon next to a

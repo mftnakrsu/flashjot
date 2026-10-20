@@ -1,6 +1,6 @@
 {
   "name": "flashjot",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Capture ideas in a flash. Plain Markdown notes with a global quick-capture box.",
   "type": "module",
   "scripts": {
