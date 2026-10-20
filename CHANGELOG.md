@@ -4,6 +4,13 @@ All notable changes to Flashjot are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- On Linux, `Ctrl+Z` undoes and `Ctrl+Shift+Z` / `Ctrl+Y` redo in the quick box, page titles and
+  other text fields. WebKitGTK leaves these keys to the app, so they did nothing before.
+
 ## [0.2.0] - 2026-10-20
 
 ### Added
