@@ -9,6 +9,10 @@ Run this on each OS before a release. Use a scratch notes folder (Settings → N
 - [ ] Type something, press `Esc`, reopen: the draft is still there. Do the same after clicking another window.
 - [ ] Press the shortcut while the box is focused: it hides.
 - [ ] Empty text + `Enter`: nothing is saved.
+- [ ] `[] süt` + Enter shows "Added to Tasks" / "Görevlere eklendi"; the Tasks page has `- [ ] süt`.
+- [ ] `[] a`, Shift+Enter, `b` adds two tasks; plain text still goes to the Inbox.
+- [ ] Only `[]` + Enter saves nothing and keeps the box open.
+- [ ] Right after Enter, typing or pressing Enter again changes nothing (#27); the next Ctrl+Alt+N opens an empty box.
 
 ## Notebook
 - [ ] `Ctrl/⌘+Alt+D` opens and focuses the notebook. Closing the window hides it, and the app stays in the tray.
@@ -19,6 +23,9 @@ Run this on each OS before a release. Use a scratch notes folder (Settings → N
 - [ ] Type in page A, switch to page B, switch back: both files on disk have the right content (no cross-writes).
 - [ ] Clicking a `- [ ]` checkbox toggles `[x]` in the file.
 - [ ] `Ctrl+K` search finds text in the body and the title.
+- [ ] "Open tasks" shows the count; lists tasks from several pages, Tasks page first; code-block tasks are not listed.
+- [ ] Ticking marks `[x]` in the file and strikes the row through; ticking again restores `[ ]`.
+- [ ] Editing the task line elsewhere, then ticking it, shows "This task changed" and reloads the list.
 - [ ] Light and dark system themes both look right.
 
 ## Settings

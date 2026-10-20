@@ -31,6 +31,7 @@ Ideas show up at bad times: in the middle of a build, a meeting, or a sentence. 
 
 - **Quick box** (`Ctrl+Alt+N`, `⌘⌥N` on macOS). Opens instantly on the monitor your mouse is on. `Enter` saves, `Shift+Enter` adds a new line, and `Esc` closes it **while keeping your draft**.
 - **Notebook** (`Ctrl+Alt+D`). Folders, pages, a Markdown editor with live styling and clickable `- [ ]` checkboxes, and full-text search (`Ctrl+K`).
+- **Tasks.** Start a quick note with `[]` to add tasks; *Open tasks* lists every unchecked task across your notes.
 - **Inbox**. Quick notes appear as cards. Move one into a folder with `M` and it gets a title from its first line. Delete with `Del`, then undo if you change your mind.
 - **Plain files.** Each note is a `.md` file in `Documents/Flashjot`. Open them with Obsidian, VS Code, `grep` or git. If Flashjot disappears, your notes stay readable.
 - **Safe writes.** Every save goes to a temporary file first and is then swapped in, so a crash or power cut never leaves a half-written note.
@@ -141,7 +142,6 @@ How the code is organized:
 
 ## Roadmap
 
-- [ ] Quick tasks from the quick box ([#18](https://github.com/mftnakrsu/flashjot/issues/18)) and an *Open tasks* view across all notes ([#19](https://github.com/mftnakrsu/flashjot/issues/19)), planned for v0.2
 - [ ] Optional SQLite storage backend for very large notebooks, behind the same `store` interface ([#22](https://github.com/mftnakrsu/flashjot/issues/22))
 - [ ] Wayland global shortcuts through the XDG GlobalShortcuts portal ([#20](https://github.com/mftnakrsu/flashjot/issues/20))
 - [ ] Watch the notes folder and reload pages edited in other apps ([#21](https://github.com/mftnakrsu/flashjot/issues/21))
