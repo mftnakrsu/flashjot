@@ -113,6 +113,32 @@ impl Store {
         self.meta(&path)
     }
 
+    /// Appends one "- [ ] task" line per task to the Tasks page and returns its path. `stored`
+    /// is the page remembered in settings; when it is unset or gone, `<root>/<default_title>.md`
+    /// is used, and created if it doesn't exist yet.
+    pub fn add_tasks(&self, stored: Option<&str>, default_title: &str, tasks: &[String]) -> Result<String, StoreError> {
+        if tasks.is_empty() {
+            return Err(StoreError::Empty);
+        }
+        let path = match stored.and_then(|rel| self.existing(rel).ok()) {
+            Some(path) => path,
+            None => self.root.join(format!("{}.md", valid_name(default_title)?)),
+        };
+        let mut content = match fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
+            Err(e) => return Err(e.into()),
+        };
+        if !content.is_empty() && !content.ends_with('\n') {
+            content.push('\n');
+        }
+        for task in tasks {
+            content.push_str(&format!("- [ ] {task}\n"));
+        }
+        atomic_write(&path, &content)?;
+        Ok(rel_string(&self.root, &path))
+    }
+
     pub fn list_inbox(&self) -> Result<Vec<NoteMeta>, StoreError> {
         let mut items = self.pages_in(&self.root.join(INBOX))?;
         for item in &mut items {
@@ -370,6 +396,28 @@ fn valid_name(name: &str) -> Result<&str, StoreError> {
         return Err(StoreError::InvalidName);
     }
     Ok(name)
+}
+
+/// Tasks from quick-box text that starts with "[]" or "[ ]"; `None` when it doesn't, so the
+/// text is saved as an Inbox note instead. Every non-empty line becomes one task, without a
+/// leading "- [ ] ", "[ ] ", "[] " or "- ".
+pub fn parse_tasks(text: &str) -> Option<Vec<String>> {
+    // A marker counts only when a space or the end of the line follows it.
+    fn strip<'a>(s: &'a str, marker: &str) -> Option<&'a str> {
+        s.strip_prefix(marker).filter(|r| r.is_empty() || r.starts_with(char::is_whitespace))
+    }
+    let first = text.trim_start();
+    strip(first, "[]").or_else(|| strip(first, "[ ]"))?;
+    let tasks = text
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim_start();
+            let rest = ["- [ ]", "[ ]", "[]", "-"].iter().find_map(|m| strip(line, m)).unwrap_or(line);
+            let rest = rest.trim();
+            (!rest.is_empty()).then(|| rest.to_string())
+        })
+        .collect();
+    Some(tasks)
 }
 
 /// A file-name-safe title from the first non-empty line: Markdown markers and characters
@@ -818,5 +866,55 @@ mod tests {
         assert_eq!(hits.len(), 50);
         assert!(s.search("title").unwrap().iter().any(|h| h.title == "Needle title"));
         assert!(s.search("  ").unwrap().is_empty());
+    }
+
+    #[test]
+    fn parse_tasks_needs_the_prefix() {
+        assert_eq!(parse_tasks("milk"), None);
+        assert_eq!(parse_tasks("[x] milk"), None);
+        assert_eq!(parse_tasks("[]milk"), None);
+        assert_eq!(parse_tasks("[] milk"), Some(vec!["milk".to_string()]));
+        assert_eq!(parse_tasks("  [ ] milk  "), Some(vec!["milk".to_string()]));
+        assert_eq!(parse_tasks("[]"), Some(vec![]));
+    }
+
+    #[test]
+    fn parse_tasks_makes_one_task_per_line() {
+        let got = parse_tasks("[] süt al\n\nekmek\n- [ ] Ali'yi ara\n- yumurta\n[] -5 derece").unwrap();
+        assert_eq!(got, ["süt al", "ekmek", "Ali'yi ara", "yumurta", "-5 derece"]);
+    }
+
+    #[test]
+    fn add_tasks_creates_the_page_then_appends() {
+        let (d, s) = store();
+        let p = s.add_tasks(None, "Görevler", &["süt".into()]).unwrap();
+        assert_eq!(p, "Görevler.md");
+        let p2 = s.add_tasks(Some(p.as_str()), "Tasks", &["ekmek".into(), "çay".into()]).unwrap();
+        assert_eq!(p2, "Görevler.md", "the stored page wins over the title of the new language");
+        assert_eq!(fs::read_to_string(d.path().join("Görevler.md")).unwrap(), "- [ ] süt\n- [ ] ekmek\n- [ ] çay\n");
+        assert!(!d.path().join("Tasks.md").exists());
+    }
+
+    #[test]
+    fn add_tasks_reuses_a_users_page_and_adds_a_missing_newline() {
+        let (d, s) = store();
+        fs::write(d.path().join("Tasks.md"), "# My tasks\n- [x] done").unwrap();
+        let p = s.add_tasks(None, "Tasks", &["new".into()]).unwrap();
+        assert_eq!(p, "Tasks.md");
+        assert_eq!(fs::read_to_string(d.path().join("Tasks.md")).unwrap(), "# My tasks\n- [x] done\n- [ ] new\n");
+    }
+
+    #[test]
+    fn add_tasks_falls_back_when_the_stored_page_is_gone() {
+        let (d, s) = store();
+        let p = s.add_tasks(Some("Old/Gone.md"), "Tasks", &["a".into()]).unwrap();
+        assert_eq!(p, "Tasks.md");
+        assert!(d.path().join("Tasks.md").is_file());
+    }
+
+    #[test]
+    fn add_tasks_rejects_an_empty_list() {
+        let (_d, s) = store();
+        assert!(matches!(s.add_tasks(None, "Tasks", &[]), Err(StoreError::Empty)));
     }
 }
