@@ -44,7 +44,7 @@
   }
 
   async function save() {
-    if (!text.trim() || status === "saving") return;
+    if (!text.trim() || status === "saving" || status === "saved") return;
     status = "saving";
     try {
       await addQuickNote(text);
@@ -60,6 +60,10 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
+    if (status === "saving" || status === "saved") {
+      e.preventDefault();
+      return;
+    }
     if (e.isComposing) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -114,7 +118,7 @@
     placeholder={status === "saved" ? "" : t("quick.placeholder")}
     aria-label={t("quick.placeholder")}
     spellcheck="true"
-    disabled={status === "saving"}
+    readonly={status === "saving" || status === "saved"}
   ></textarea>
 
   <footer>
