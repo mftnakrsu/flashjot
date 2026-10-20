@@ -39,11 +39,32 @@ export interface Settings {
   notebookShortcut: string;
   language: "auto" | "en" | "tr";
   launchAtLogin: boolean;
+  tasksPage: string | null;
 }
 
 export const INBOX = "Inbox";
 
-export const addQuickNote = (text: string) => invoke<NoteMeta>("add_quick_note", { text });
+export type QuickSaved = { kind: "note"; path: string } | { kind: "tasks"; path: string; count: number };
+/** Text starting with "[]" is saved as tasks on the Tasks page, titled `tasksTitle` when new. */
+export const addQuickNote = (text: string, tasksTitle: string) =>
+  invoke<QuickSaved>("add_quick_note", { text, tasksTitle });
+
+export interface Task {
+  line: number;
+  text: string;
+}
+
+export interface TaskGroup {
+  path: string;
+  title: string;
+  modified: number;
+  tasks: Task[];
+}
+
+export const openTasks = () => invoke<TaskGroup[]>("open_tasks");
+/** Fails with CONFLICT if that line is no longer this task. */
+export const setTask = (path: string, line: number, text: string, done: boolean) =>
+  invoke<void>("set_task", { path, line, text, done });
 export const listInbox = () => invoke<NoteMeta[]>("list_inbox");
 export const getTree = () => invoke<Tree>("get_tree");
 export const readNote = (path: string) => invoke<Note>("read_note", { path });

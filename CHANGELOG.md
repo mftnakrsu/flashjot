@@ -4,6 +4,20 @@ All notable changes to Flashjot are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-10-20
+
+### Added
+
+- Start a quick note with `[]` to add tasks to a Tasks page instead of the Inbox. Every line
+  becomes one task. (#18)
+- **Open tasks** in the notebook lists every unchecked task across your notes, grouped by page.
+  Tick a task to mark it done in its file. (#19)
+
+### Fixed
+
+- The quick box ignores typing while a note is being saved, so nothing typed in that moment ends
+  up in the next note or saves a second one. (#27)
+
 ## [0.1.1] - 2026-10-19
 
 ### Fixed

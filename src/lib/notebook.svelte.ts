@@ -1,10 +1,11 @@
 // Notebook window state shared by its components.
 import * as api from "$lib/api";
-import type { Hit, NoteMeta, Tree } from "$lib/api";
+import type { Hit, NoteMeta, TaskGroup, Tree } from "$lib/api";
 import { lang as uiLang, t } from "$lib/i18n.svelte";
 
 export type View =
   | { kind: "inbox" }
+  | { kind: "tasks" }
   | { kind: "page"; path: string }
   | { kind: "settings" }
   | { kind: "empty" };
@@ -24,6 +25,8 @@ export type Dialog =
 class Notebook {
   tree = $state<Tree>({ folders: [], root_pages: [] });
   inbox = $state<NoteMeta[]>([]);
+  tasks = $state<TaskGroup[]>([]);
+  openTaskCount = $derived(this.tasks.reduce((n, g) => n + g.tasks.length, 0));
   view = $state<View>({ kind: "inbox" });
   query = $state("");
   results = $state<Hit[]>([]);
@@ -40,9 +43,10 @@ class Notebook {
   /** Runs on every notes-changed event, which each command that changes notes emits. */
   async refresh() {
     try {
-      const [tree, inbox] = await Promise.all([api.getTree(), api.listInbox()]);
+      const [tree, inbox, tasks] = await Promise.all([api.getTree(), api.listInbox(), api.openTasks()]);
       this.tree = tree;
       this.inbox = inbox;
+      this.tasks = tasks;
       if (this.query.trim()) await this.search(this.query);
     } catch (e) {
       this.error(e);

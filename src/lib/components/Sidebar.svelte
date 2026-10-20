@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronRight, FilePlus, FileText, FolderPlus, Inbox, Search, Settings, Trash2 } from "@lucide/svelte";
+  import { ChevronDown, ChevronRight, FilePlus, FileText, FolderPlus, Inbox, ListChecks, Search, Settings, Trash2 } from "@lucide/svelte";
   import { isMac } from "$lib/api";
   import { t } from "$lib/i18n.svelte";
   import { nb } from "$lib/notebook.svelte";
@@ -76,6 +76,11 @@
         <Inbox size={16} aria-hidden="true" />
         <span class="title">{t("nb.inbox")}</span>
         {#if nb.inbox.length}<span class="count">{nb.inbox.length}</span>{/if}
+      </button>
+      <button class="row inbox last" class:active={nb.view.kind === "tasks"} onclick={() => nb.show({ kind: "tasks" })}>
+        <ListChecks size={16} aria-hidden="true" />
+        <span class="title">{t("nb.openTasks")}</span>
+        {#if nb.openTaskCount}<span class="count">{nb.openTaskCount}</span>{/if}
       </button>
 
       {#each nb.tree.root_pages as page (page.path)}
@@ -228,8 +233,11 @@
   }
 
   .inbox {
-    margin-bottom: 10px;
     font-weight: 600;
+  }
+
+  .inbox.last {
+    margin-bottom: 10px;
   }
 
   .count {
