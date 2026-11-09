@@ -48,6 +48,44 @@ jobs:
 
       - run: npm ci
 
+      # GitHub's release download links for the bundler's tools can return 504 for a while (v0.3.0
+      # failed twice that way) even though the API serves the same files. Fetch them through the
+      # API into tauri's tool cache, so the bundler finds them and skips its own download. Names and
+      # paths follow tauri-bundler (msi/mod.rs, appimage/linuxdeploy.rs); if a CLI update changes
+      # them, the bundler simply downloads as before.
+      - name: Prefetch bundler tools
+        if: matrix.platform != 'macos-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          fetch() { # repo tag asset dest
+            local id
+            for i in 1 2 3 4 5; do
+              id=$(gh api "repos/$1/releases/tags/$2" --jq ".assets[] | select(.name==\"$3\") | .id") &&
+                gh api -H "Accept: application/octet-stream" "repos/$1/releases/assets/$id" > "$4" && return 0
+              echo "retry $i: $3"; sleep 15
+            done
+            return 1
+          }
+          if [ "$RUNNER_OS" = Linux ]; then
+            dir=~/.cache/tauri
+            mkdir -p "$dir"
+            fetch tauri-apps/binary-releases apprun-old AppRun-x86_64 "$dir/AppRun-x86_64"
+            fetch tauri-apps/binary-releases linuxdeploy-07333c6 linuxdeploy-x86_64.AppImage "$dir/linuxdeploy-07333c6-x86_64.AppImage"
+            chmod +x "$dir"/AppRun-x86_64 "$dir"/linuxdeploy-07333c6-x86_64.AppImage
+          else
+            zip="$RUNNER_TEMP/wix314-binaries.zip"
+            fetch wixtoolset/wix3 wix3141rtm wix314-binaries.zip "$zip"
+            # WIX_SHA256 in tauri-bundler.
+            echo "6ac824e1642d6f7277d0ed7ea09411a508f6116ba6fae0aa5f2c7daa2ff43d31  $zip" | sha256sum -c -
+            dest="$(cygpath "$LOCALAPPDATA")/tauri/WixTools314"
+            mkdir -p "$dest"
+            pwsh -NoProfile -Command "Expand-Archive -Path '$(cygpath -w "$zip")' -DestinationPath '$(cygpath -w "$dest")' -Force"
+            ls "$dest" | head
+          fi
+
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
