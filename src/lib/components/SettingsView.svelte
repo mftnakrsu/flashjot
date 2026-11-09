@@ -89,6 +89,7 @@
         {/each}
         <p class="hint">{t("set.recordHint")}</p>
         {#if isLinux}<p class="hint">{t("set.wayland")}</p>{/if}
+        {#if isLinux && settings.notebookShortcut === "CommandOrControl+Alt+D"}<p class="hint">{t("set.gnomeD")}</p>{/if}
       </fieldset>
 
       <fieldset>
