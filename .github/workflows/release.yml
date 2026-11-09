@@ -49,9 +49,9 @@ jobs:
       - run: npm ci
 
       # GitHub's release download links for the bundler's tools can return 504 for a while (v0.3.0
-      # failed twice that way) even though the API serves the same files. Fetch them through the
+      # failed three times that way) even though the API serves the same files. Fetch them through the
       # API into tauri's tool cache, so the bundler finds them and skips its own download. Names and
-      # paths follow tauri-bundler (msi/mod.rs, appimage/linuxdeploy.rs); if a CLI update changes
+      # paths follow tauri-bundler (msi/mod.rs, nsis/mod.rs, appimage/linuxdeploy.rs); if a CLI update changes
       # them, the bundler simply downloads as before.
       - name: Prefetch bundler tools
         if: matrix.platform != 'macos-latest'
@@ -80,10 +80,24 @@ jobs:
             fetch wixtoolset/wix3 wix3141rtm wix314-binaries.zip "$zip"
             # WIX_SHA256 in tauri-bundler.
             echo "6ac824e1642d6f7277d0ed7ea09411a508f6116ba6fae0aa5f2c7daa2ff43d31  $zip" | sha256sum -c -
-            dest="$(cygpath "$LOCALAPPDATA")/tauri/WixTools314"
-            mkdir -p "$dest"
-            pwsh -NoProfile -Command "Expand-Archive -Path '$(cygpath -w "$zip")' -DestinationPath '$(cygpath -w "$dest")' -Force"
-            ls "$dest" | head
+            tools="$(cygpath "$LOCALAPPDATA")/tauri"
+            unpack() { pwsh -NoProfile -Command "Expand-Archive -Path '$(cygpath -w "$1")' -DestinationPath '$(cygpath -w "$2")' -Force"; }
+            mkdir -p "$tools/WixTools314"
+            unpack "$zip" "$tools/WixTools314"
+
+            # NSIS for the .exe installer: NSIS_SHA1, NSIS_TAURI_UTILS_SHA1 in tauri-bundler
+            # nsis/mod.rs. The zip holds nsis-3.13/, which tauri renames to NSIS.
+            nsis="$RUNNER_TEMP/nsis-3.13.zip"
+            utils="$RUNNER_TEMP/nsis_tauri_utils.dll"
+            fetch tauri-apps/binary-releases nsis-3.13 nsis-3.13.zip "$nsis"
+            fetch tauri-apps/nsis-tauri-utils nsis_tauri_utils-v0.5.3 nsis_tauri_utils.dll "$utils"
+            echo "db14f8af2ea346b786c6ae19343f61aaf5e09b8e  $nsis" | sha1sum -c -
+            echo "75197fee3c6a814fe035788d1c34ead39349b860  $utils" | sha1sum -c -
+            unpack "$nsis" "$tools"
+            mv "$tools/nsis-3.13" "$tools/NSIS"
+            mkdir -p "$tools/NSIS/Plugins/x86-unicode/additional"
+            cp "$utils" "$tools/NSIS/Plugins/x86-unicode/additional/nsis_tauri_utils.dll"
+            ls "$tools" "$tools/WixTools314" | head -20
           fi
 
       - uses: tauri-apps/tauri-action@v1
