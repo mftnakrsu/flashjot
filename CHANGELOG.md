@@ -10,6 +10,11 @@ All notable changes to Flashjot are listed here. The format follows
 
 - On Linux, `Ctrl+Z` undoes and `Ctrl+Shift+Z` / `Ctrl+Y` redo in the quick box, page titles and
   other text fields. WebKitGTK leaves these keys to the app, so they did nothing before.
+- The Inbox stays in time order after a quick note is renamed; renamed notes are placed by
+  their file time. (#17)
+- Pages with `:` in the name, created by other apps on Linux or macOS, open again. Names that
+  Windows reserves (`CON`, `NUL`, `COM1`…) or that end in a dot are refused with a clear
+  message. (#16)
 
 ## [0.2.0] - 2026-10-20
 
