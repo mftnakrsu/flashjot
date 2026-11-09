@@ -61,6 +61,7 @@ const en = {
   "set.wayland":
     "On Wayland, global shortcuts may not work. Bind “flashjot --quick” and “flashjot --notebook” in your desktop's keyboard settings instead.",
   "err.generic": "Something went wrong: {e}",
+  "err.reservedName": "That name can't be used: Windows reserves it (CON, NUL, COM1…) or it ends with a dot.",
 };
 
 type Key = keyof typeof en;
@@ -126,6 +127,7 @@ const tr: Record<Key, string> = {
   "set.wayland":
     "Wayland'de global kısayollar çalışmayabilir. Bunun yerine masaüstü klavye ayarlarından “flashjot --quick” ve “flashjot --notebook” komutlarına kısayol ata.",
   "err.generic": "Bir şeyler ters gitti: {e}",
+  "err.reservedName": "Bu ad kullanılamaz: Windows bunu ayırmış (CON, NUL, COM1…) ya da ad noktayla bitiyor.",
 };
 
 const dictionaries = { en, tr } as const;
