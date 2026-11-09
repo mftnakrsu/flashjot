@@ -82,6 +82,11 @@ export const moveNote = (path: string, folder: string) => invoke<NoteMeta>("move
 export const trashNote = (path: string) => invoke<string>("trash_note", { path });
 export const restoreNote = (trashPath: string, originalPath: string) =>
   invoke<void>("restore_note", { trashPath, originalPath });
+export const trashCount = () => invoke<number>("trash_count");
+/** Deletes every note in the trash for good; returns how many. */
+export const emptyTrash = () => invoke<number>("empty_trash");
+export type TrayLabels = { quick: string; notebook: string; settings: string; quit: string };
+export const setTrayLabels = (labels: TrayLabels) => invoke<void>("set_tray_labels", { labels });
 export const searchNotes = (query: string) => invoke<Hit[]>("search_notes", { query });
 export const getSettings = () => invoke<Settings>("get_settings");
 /** Returns problems such as a shortcut already taken; empty when all is well. */

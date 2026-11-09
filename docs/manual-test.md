@@ -27,12 +27,16 @@ Run this on each OS before a release. Use a scratch notes folder (Settings → N
 - [ ] "Open tasks" shows the count; lists tasks from several pages, Tasks page first; code-block tasks are not listed.
 - [ ] Ticking marks `[x]` in the file and strikes the row through; ticking again restores `[ ]`.
 - [ ] Editing the task line elsewhere, then ticking it, shows "This task changed" and reloads the list.
+- [ ] Rename a quick note to `Zebra`: it doesn't jump to the top of the Inbox (#17).
+- [ ] A page named `CON` or `nul.md` is refused with a clear message, not a raw error (#16).
 - [ ] Light and dark system themes both look right.
 
 ## Settings
 - [ ] Record a new quick shortcut, save it, and check that the old one stops working and the new one works.
-- [ ] Switch the language to Türkçe and back. Both windows update.
+- [ ] Switch the language to Türkçe and back. Both windows and the tray menu update (#13).
 - [ ] Change the notes folder: the sidebar shows the new folder's contents.
+- [ ] Trash: delete two notes, open Settings: "2 deleted notes". **Empty trash** asks once, empties on the second click, and the button is then disabled (#15).
+- [ ] A note in `.trash` named with a stamp older than 30 days is gone after restarting the app (#15).
 - [ ] "Start when I log in" (release build only): log out and in, and the app is in the tray without opening windows.
 
 ## Linux extras
