@@ -16,6 +16,17 @@ These two work in every app while Flashjot runs. You can change them in
 | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> | Open the quick box; press again to hide it |
 | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> | Open the notebook |
 
+:::caution[Ctrl+Alt+D on Ubuntu and GNOME]
+GNOME uses <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> for **Show desktop** on some setups,
+and it wins: the desktop shows instead of the notebook. Flashjot can't detect this. Either pick
+another notebook shortcut in [Settings](/guide/settings/#shortcuts), or free the keys for
+Flashjot:
+
+```sh
+gsettings set org.gnome.desktop.wm.keybindings show-desktop "['<Primary><Super>d', '<Super>d']"
+```
+:::
+
 ## Quick box
 
 | Keys | Action |

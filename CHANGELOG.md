@@ -6,6 +6,11 @@ All notable changes to Flashjot are listed here. The format follows
 
 ## [Unreleased]
 
+### Documentation
+
+- On Ubuntu and GNOME, `Ctrl+Alt+D` can be taken by *Show desktop*. The docs, the README and
+  Settings (on Linux, while the default is in use) now say so and how to fix it.
+
 ### Fixed
 
 - On Linux, `Ctrl+Z` undoes and `Ctrl+Shift+Z` / `Ctrl+Y` redo in the quick box, page titles and

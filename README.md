@@ -79,6 +79,10 @@ Flashjot starts in the tray. The notebook opens the first time you launch it fro
 | Notebook | `Ctrl+,` | Settings |
 | Inbox | `↑` `↓` / `Enter` / `M` / `Del` | Select / Open / Move / Delete |
 
+> **Ubuntu / GNOME:** some setups bind `Ctrl+Alt+D` to *Show desktop*, which then wins over
+> Flashjot. Pick another notebook shortcut in Settings, or run
+> `gsettings set org.gnome.desktop.wm.keybindings show-desktop "['<Primary><Super>d', '<Super>d']"`.
+
 On macOS, use `⌘` instead of `Ctrl`.
 
 ### Linux on Wayland
