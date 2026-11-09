@@ -6,6 +6,12 @@ All notable changes to Flashjot are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Empty trash** in Settings. Deleted notes are now removed for good 30 days after deletion,
+  when Flashjot starts. (#15)
+- The tray menu follows the UI language. (#13)
+
 ### Changed
 
 - The release build is optimised for size: the Linux binary went from 8.2 MB to 5.9 MB and the

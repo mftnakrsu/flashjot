@@ -278,6 +278,35 @@ impl Store {
         Ok(())
     }
 
+    /// Number of deleted notes waiting in `.trash`.
+    pub fn trash_count(&self) -> Result<usize, StoreError> {
+        Ok(self.trash_files()?.len())
+    }
+
+    /// Deletes notes in `.trash` for good: all of them, or only those deleted before
+    /// `older_than` (local time). Returns how many were removed.
+    pub fn empty_trash(&self, older_than: Option<NaiveDateTime>) -> Result<usize, StoreError> {
+        let mut removed = 0;
+        for path in self.trash_files()? {
+            if older_than.is_some_and(|cutoff| deleted_at(&path) >= cutoff) {
+                continue;
+            }
+            fs::remove_file(&path)?;
+            removed += 1;
+        }
+        Ok(removed)
+    }
+
+    fn trash_files(&self) -> Result<Vec<PathBuf>, StoreError> {
+        let entries = match fs::read_dir(self.root.join(TRASH)) {
+            Ok(e) => e,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e) => return Err(e.into()),
+        };
+        // file_type() does not follow symlinks, so a link never deletes what it points to.
+        Ok(entries.flatten().filter(|e| e.file_type().is_ok_and(|t| t.is_file())).map(|e| e.path()).collect())
+    }
+
     pub fn search(&self, q: &str) -> Result<Vec<Hit>, StoreError> {
         let needle = fold(q.trim());
         if needle.is_empty() {
@@ -625,6 +654,18 @@ pub(crate) fn atomic_write(path: &Path, content: &str) -> io::Result<()> {
     fs::rename(&tmp, path).inspect_err(|_| {
         let _ = fs::remove_file(&tmp);
     })
+}
+
+/// When a note in `.trash` was deleted: the "YYYYmmddHHMMSSmmm " stamp `trash()` puts in
+/// front of its name, or else its file time.
+fn deleted_at(path: &Path) -> NaiveDateTime {
+    let name = path.file_name().unwrap_or_default().to_string_lossy();
+    let stamp = name.get(..18).filter(|s| s.ends_with(' ') && s[..17].bytes().all(|b| b.is_ascii_digit()));
+    if let Some(t) = stamp.and_then(|s| NaiveDateTime::parse_from_str(&s[..14], "%Y%m%d%H%M%S").ok()) {
+        return t;
+    }
+    let modified = fs::metadata(path).and_then(|m| m.modified()).unwrap_or(std::time::SystemTime::now());
+    chrono::DateTime::<chrono::Local>::from(modified).naive_local()
 }
 
 fn is_page(path: &Path) -> bool {
@@ -1135,5 +1176,36 @@ mod tests {
         assert!(s.create_page("", "Console").is_ok());
         assert!(s.create_page("", "COM10").is_ok());
         assert!(matches!(s.create_folder("con"), Err(StoreError::ReservedName)));
+    }
+
+    #[test]
+    fn empty_trash_removes_everything_and_counts() {
+        let (d, s) = store();
+        assert_eq!(s.trash_count().unwrap(), 0);
+        assert_eq!(s.empty_trash(None).unwrap(), 0, "no .trash folder yet");
+        for name in ["A", "B"] {
+            let p = s.create_page("", name).unwrap();
+            s.trash(&p.path).unwrap();
+        }
+        assert_eq!(s.trash_count().unwrap(), 2);
+        assert_eq!(s.empty_trash(None).unwrap(), 2);
+        assert_eq!(s.trash_count().unwrap(), 0);
+        assert!(d.path().join(TRASH).is_dir(), "folder itself stays");
+    }
+
+    #[test]
+    fn empty_trash_older_than_uses_the_deletion_time_in_the_name() {
+        let (d, s) = store();
+        let trash = d.path().join(TRASH);
+        fs::create_dir_all(&trash).unwrap();
+        fs::write(trash.join("20260901120000000 Old.md"), "x").unwrap();
+        fs::write(trash.join("20261015120000000 New.md"), "x").unwrap();
+        // No stamp in the name: the file time (now) decides, so it is kept.
+        fs::write(trash.join("Odd.md"), "x").unwrap();
+        let cutoff = NaiveDateTime::parse_from_str("2026-10-01 00:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        assert_eq!(s.empty_trash(Some(cutoff)).unwrap(), 1);
+        assert!(!trash.join("20260901120000000 Old.md").exists());
+        assert!(trash.join("20261015120000000 New.md").exists());
+        assert!(trash.join("Odd.md").exists());
     }
 }

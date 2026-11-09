@@ -5,8 +5,8 @@
   import "@fontsource/ia-writer-quattro/400-italic.css";
   import "$lib/theme.css";
   import { onMount } from "svelte";
-  import { getSettings, isLinux, onSettingsChanged } from "$lib/api";
-  import { setLanguage } from "$lib/i18n.svelte";
+  import { getSettings, isLinux, onSettingsChanged, setTrayLabels } from "$lib/api";
+  import { setLanguage, t } from "$lib/i18n.svelte";
 
   let { children } = $props();
 
@@ -27,7 +27,13 @@
   function applyLanguage() {
     getSettings()
       .then((s) => setLanguage(s.language))
-      .catch(() => setLanguage("auto"));
+      .catch(() => setLanguage("auto"))
+      .then(() => {
+        // The tray menu is built in Rust; give it the labels in the UI language.
+        const labels = { quick: t("tray.quick"), notebook: t("tray.notebook"), settings: t("tray.settings"), quit: t("tray.quit") };
+        return setTrayLabels(labels);
+      })
+      .catch(() => {});
   }
 
   onMount(() => {
