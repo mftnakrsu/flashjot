@@ -16,6 +16,8 @@ pub enum StoreError {
     Empty,
     InvalidPath,
     InvalidName,
+    /// A name Windows can't use (CON, NUL, COM1…, or one ending in a dot).
+    ReservedName,
     NotFound,
     /// The file changed on disk since it was read, e.g. another app saved it.
     Conflict,
@@ -28,6 +30,8 @@ impl fmt::Display for StoreError {
             StoreError::Empty => write!(f, "note is empty"),
             StoreError::InvalidPath => write!(f, "invalid path"),
             StoreError::InvalidName => write!(f, "invalid name"),
+            // Matched by the UI (RESERVED_NAME in src/lib/api.ts).
+            StoreError::ReservedName => write!(f, "reserved name"),
             StoreError::NotFound => write!(f, "note not found"),
             // Matched by the UI (CONFLICT in src/lib/api.ts).
             StoreError::Conflict => write!(f, "note changed on disk"),
@@ -160,9 +164,8 @@ impl Store {
             let content = fs::read_to_string(self.root.join(&item.path))?;
             item.preview = Some(truncate(content.trim(), 200));
         }
-        // Names are timestamps, so a reverse sort on the stem is newest first
-        // ("…143205-2" sorts above "…143205").
-        items.sort_by(|a, b| b.title.cmp(&a.title));
+        // Newest first by the time in the name; renamed notes fall back to the file time.
+        items.sort_by_cached_key(|n| std::cmp::Reverse(inbox_order(n)));
         Ok(items)
     }
 
@@ -460,7 +463,9 @@ fn check_rel(rel: &str, allow_trash: bool) -> Result<PathBuf, StoreError> {
     let mut out = PathBuf::new();
     for (i, part) in rel.split('/').enumerate() {
         let hidden_ok = allow_trash && i == 0 && part == TRASH;
-        if part.is_empty() || part == "." || part == ".." || part.contains(':') {
+        // ':' is legal in file names on Linux and macOS, so pages named that way must open;
+        // on Windows it would name a drive or an alternate data stream.
+        if part.is_empty() || part == "." || part == ".." || (cfg!(windows) && part.contains(':')) {
             return Err(StoreError::InvalidPath);
         }
         if part.starts_with('.') && !hidden_ok {
@@ -478,7 +483,46 @@ fn valid_name(name: &str) -> Result<&str, StoreError> {
     if name.is_empty() || name.starts_with('.') || name.chars().any(bad) || name.len() > 200 {
         return Err(StoreError::InvalidName);
     }
+    // Rejected everywhere so notes stay portable when the folder is synced to Windows.
+    if is_reserved_on_windows(name) {
+        return Err(StoreError::ReservedName);
+    }
     Ok(name)
+}
+
+/// CON, PRN, AUX, NUL, COM1–9 and LPT1–9, with or without an extension, and names ending
+/// in a dot, which Windows silently strips.
+fn is_reserved_on_windows(name: &str) -> bool {
+    if name.ends_with('.') {
+        return true;
+    }
+    let base = name.split('.').next().unwrap_or(name).trim_end().to_ascii_uppercase();
+    match base.as_str() {
+        "CON" | "PRN" | "AUX" | "NUL" => true,
+        _ => {
+            let b = base.as_bytes();
+            b.len() == 4 && (base.starts_with("COM") || base.starts_with("LPT")) && (b'1'..=b'9').contains(&b[3])
+        }
+    }
+}
+
+/// Sort key for the Inbox: (creation ms, same-second suffix). Quick notes are named
+/// "YYYY-MM-DD-HHMMSS" or "YYYY-MM-DD-HHMMSS-N"; any other name uses the file time.
+fn inbox_order(n: &NoteMeta) -> (i64, u32) {
+    use chrono::TimeZone;
+    let stamp = n.title.get(..17).and_then(|s| NaiveDateTime::parse_from_str(s, "%Y-%m-%d-%H%M%S").ok());
+    let suffix = match n.title.get(17..) {
+        Some("") => Some(0),
+        Some(rest) => rest.strip_prefix('-').and_then(|d| d.parse::<u32>().ok()),
+        None => None,
+    };
+    match (stamp, suffix) {
+        (Some(t), Some(k)) => {
+            let ms = chrono::Local.from_local_datetime(&t).earliest().map_or(0, |t| t.timestamp_millis());
+            (ms, k)
+        }
+        _ => (n.modified, 0),
+    }
 }
 
 /// Tasks from quick-box text that starts with "[]" or "[ ]"; `None` when it doesn't, so the
@@ -1085,6 +1129,53 @@ mod tests {
         assert!(matches!(s.set_task("Tasks.md", 9, "a", true), Err(StoreError::Conflict)));
         assert!(matches!(s.set_task("Tasks.md", 0, "a", false), Err(StoreError::Conflict)), "already open");
         assert!(matches!(s.set_task("../x.md", 0, "a", true), Err(StoreError::InvalidPath)));
+    }
+
+    #[test]
+    fn list_inbox_keeps_renamed_notes_in_time_order() {
+        let (d, s) = store();
+        let a = s.add_inbox("first", at(10, 0, 0)).unwrap();
+        s.add_inbox("second", at(11, 0, 0)).unwrap();
+        s.add_inbox("third", at(12, 0, 0)).unwrap();
+        // A renamed note keeps no timestamp in its name, so its file time decides.
+        s.rename(&a.path, "Zebra").unwrap();
+        let old = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1);
+        fs::File::options().write(true).open(d.path().join("Inbox/Zebra.md")).unwrap().set_modified(old).unwrap();
+        let titles: Vec<_> = s.list_inbox().unwrap().into_iter().map(|n| n.title).collect();
+        assert_eq!(titles, ["2026-10-19-120000", "2026-10-19-110000", "Zebra"]);
+    }
+
+    #[test]
+    fn list_inbox_orders_same_second_suffixes_numerically() {
+        let (_d, s) = store();
+        for _ in 0..11 {
+            s.add_inbox("x", at(10, 0, 0)).unwrap();
+        }
+        let items = s.list_inbox().unwrap();
+        assert_eq!(items[0].title, "2026-10-19-100000-11");
+        assert_eq!(items[1].title, "2026-10-19-100000-10");
+        assert_eq!(items[10].title, "2026-10-19-100000");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pages_with_a_colon_open_on_unix() {
+        let (d, s) = store();
+        fs::write(d.path().join("Meeting 10:30.md"), "agenda\n").unwrap();
+        let tree = s.tree().unwrap();
+        let page = tree.root_pages.iter().find(|p| p.title == "Meeting 10:30").expect("listed");
+        assert_eq!(s.read(&page.path).unwrap().content, "agenda\n");
+    }
+
+    #[test]
+    fn rejects_windows_reserved_names() {
+        let (_d, s) = store();
+        for name in ["CON", "nul", "Com1", "lpt9", "aux.txt", "PRN ", "name."] {
+            assert!(matches!(s.create_page("", name), Err(StoreError::ReservedName)), "{name}");
+        }
+        assert!(s.create_page("", "Console").is_ok());
+        assert!(s.create_page("", "COM10").is_ok());
+        assert!(matches!(s.create_folder("con"), Err(StoreError::ReservedName)));
     }
 
     #[test]

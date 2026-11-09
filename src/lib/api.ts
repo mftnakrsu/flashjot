@@ -73,6 +73,8 @@ export const writeNote = (path: string, content: string, modified: number) =>
   invoke<number>("write_note", { path, content, modified });
 /** StoreError::Conflict in src-tauri/src/store.rs. */
 export const CONFLICT = "note changed on disk";
+/** The error for names Windows can't use (CON, NUL, COM1…). */
+export const RESERVED_NAME = "reserved name";
 export const createFolder = (name: string) => invoke<void>("create_folder", { name });
 export const createPage = (folder: string, title: string) => invoke<NoteMeta>("create_page", { folder, title });
 export const renameNote = (path: string, title: string) => invoke<NoteMeta>("rename_note", { path, title });
