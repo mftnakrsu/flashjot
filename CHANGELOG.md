@@ -6,6 +6,8 @@ All notable changes to Flashjot are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-09
+
 ### Added
 
 - **Empty trash** in Settings. Deleted notes are now removed for good 30 days after deletion,
@@ -79,5 +81,7 @@ All notable changes to Flashjot are listed here. The format follows
 First release: a global quick-capture box, an Inbox, a Markdown notebook with folders and search,
 English and Turkish.
 
+[0.3.0]: https://github.com/mftnakrsu/flashjot/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/mftnakrsu/flashjot/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/mftnakrsu/flashjot/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mftnakrsu/flashjot/releases/tag/v0.1.0
