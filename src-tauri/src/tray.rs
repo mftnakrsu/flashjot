@@ -1,11 +1,21 @@
 //! Tray icon and its menu.
 
+use crate::commands::TrayLabels;
 use crate::windows;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager, Wry};
+
+/// The menu items, kept so their labels can follow the UI language.
+struct TrayItems {
+    quick: MenuItem<Wry>,
+    notebook: MenuItem<Wry>,
+    settings: MenuItem<Wry>,
+    quit: MenuItem<Wry>,
+}
 
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
+    // English until the frontend sends labels in the UI language (set_labels).
     let quick = MenuItem::with_id(app, "quick", "Quick note", true, None::<&str>)?;
     let notebook = MenuItem::with_id(app, "notebook", "Notebook", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
@@ -30,5 +40,15 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
         tray = tray.icon(icon.clone());
     }
     tray.build(app)?;
+    app.manage(TrayItems { quick, notebook, settings, quit });
+    Ok(())
+}
+
+pub fn set_labels(app: &AppHandle, labels: &TrayLabels) -> tauri::Result<()> {
+    let items = app.state::<TrayItems>();
+    items.quick.set_text(&labels.quick)?;
+    items.notebook.set_text(&labels.notebook)?;
+    items.settings.set_text(&labels.settings)?;
+    items.quit.set_text(&labels.quit)?;
     Ok(())
 }

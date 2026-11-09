@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { getSettings, isMac, notesDir, prettyShortcut, revealNotesDir, setSettings, type Settings } from "$lib/api";
+  import { emptyTrash, getSettings, isMac, notesDir, prettyShortcut, revealNotesDir, setSettings, trashCount, type Settings } from "$lib/api";
   import { setLanguage, t } from "$lib/i18n.svelte";
   import { nb } from "$lib/notebook.svelte";
 
@@ -8,16 +8,35 @@
   let defaultDir = $state("");
   let recording = $state<"quickShortcut" | "notebookShortcut" | null>(null);
   let problems = $state<string[]>([]);
+  let trashed = $state(0);
+  let confirmEmpty = $state(false);
   const isLinux = /Linux/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent);
 
   onMount(async () => {
     try {
       settings = await getSettings();
       defaultDir = await notesDir();
+      trashed = await trashCount();
     } catch (e) {
       nb.error(e);
     }
   });
+
+  /** First click asks, second click deletes. */
+  async function onEmptyTrash() {
+    if (!confirmEmpty) {
+      confirmEmpty = true;
+      return;
+    }
+    confirmEmpty = false;
+    try {
+      await emptyTrash();
+      trashed = await trashCount();
+      nb.notify(t("set.trashDone"));
+    } catch (e) {
+      nb.error(e);
+    }
+  }
 
   /** Turn a keydown into a Tauri accelerator such as "CommandOrControl+Alt+N". */
   function accelerator(e: KeyboardEvent): string | null {
@@ -112,6 +131,17 @@
         </select>
       </fieldset>
 
+      <fieldset>
+        <legend>{t("set.trash")}</legend>
+        <p class="hint">
+          {t("set.trashHint")}
+          {t("set.trashCount", { n: String(trashed) })}
+        </p>
+        <button type="button" class:danger={confirmEmpty} disabled={trashed === 0} onclick={onEmptyTrash} onblur={() => (confirmEmpty = false)}>
+          {confirmEmpty ? t("set.trashConfirm", { n: String(trashed) }) : t("set.trashEmpty")}
+        </button>
+      </fieldset>
+
       <label class="check">
         <input type="checkbox" bind:checked={settings.launchAtLogin} />
         {t("set.launch")}
@@ -195,6 +225,11 @@
   select {
     width: auto;
     min-width: 200px;
+  }
+
+  .danger {
+    color: var(--danger);
+    border-color: var(--danger);
   }
 
   .link {
