@@ -6,6 +6,12 @@ All notable changes to Flashjot are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Empty trash** in Settings. Deleted notes are now removed for good 30 days after deletion,
+  when Flashjot starts. (#15)
+- The tray menu follows the UI language. (#13)
+
 ### Fixed
 
 - On Linux, `Ctrl+Z` undoes and `Ctrl+Shift+Z` / `Ctrl+Y` redo in the quick box, page titles and
