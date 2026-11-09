@@ -37,6 +37,18 @@ pub(crate) fn sync_autostart(app: &AppHandle, enabled: bool) -> Result<(), Strin
     result.map_err(|e| format!("launch at login: {e}"))
 }
 
+/// Deleted notes stay in `.trash` for this many days, then go at the next start.
+const TRASH_DAYS: i64 = 30;
+
+fn purge_old_trash(app: &AppHandle) {
+    let cutoff = chrono::Local::now().naive_local() - chrono::Duration::days(TRASH_DAYS);
+    let state = app.state::<AppState>();
+    let store = state.store.lock().unwrap();
+    if let Err(e) = store.empty_trash(Some(cutoff)) {
+        eprintln!("flashjot: emptying old trash: {e}");
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -65,6 +77,7 @@ pub fn run() {
             if let Err(e) = sync_autostart(&handle, settings.launch_at_login) {
                 eprintln!("flashjot: {e}");
             }
+            purge_old_trash(&handle);
 
             let args: Vec<String> = std::env::args().collect();
             handle_args(&handle, &args, true);
@@ -82,6 +95,9 @@ pub fn run() {
             commands::move_note,
             commands::trash_note,
             commands::restore_note,
+            commands::trash_count,
+            commands::empty_trash,
+            commands::set_tray_labels,
             commands::search_notes,
             commands::open_tasks,
             commands::set_task,
