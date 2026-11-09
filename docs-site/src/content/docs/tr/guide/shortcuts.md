@@ -16,6 +16,17 @@ Bu ikisi, Flashjot çalıştığı sürece her uygulamada çalışır.
 | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> | Hızlı kutuyu açar; tekrar basınca gizler |
 | <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd> | Defteri açar |
 
+:::caution[Ubuntu ve GNOME'da Ctrl+Alt+D]
+Bazı kurulumlarda GNOME <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>D</kbd>'yi **Masaüstünü göster**
+için kullanır ve öncelik onda olur: defter yerine masaüstü görünür. Flashjot bunu fark edemez.
+Ya [Ayarlar](/tr/guide/settings/#kısayollar)'dan defter için başka bir kısayol seç ya da tuşları
+Flashjot'a bırak:
+
+```sh
+gsettings set org.gnome.desktop.wm.keybindings show-desktop "['<Primary><Super>d', '<Super>d']"
+```
+:::
+
 ## Hızlı kutu
 
 | Tuşlar | İş |
