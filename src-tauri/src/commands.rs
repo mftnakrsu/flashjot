@@ -164,6 +164,31 @@ pub fn trash_note(app: AppHandle, state: State<AppState>, path: String) -> CmdRe
 }
 
 #[tauri::command]
+pub fn trash_count(state: State<AppState>) -> CmdResult<usize> {
+    with_store(&state, |s| s.trash_count())
+}
+
+/// Deletes every note in the trash for good; returns how many.
+#[tauri::command]
+pub fn empty_trash(state: State<AppState>) -> CmdResult<usize> {
+    with_store(&state, |s| s.empty_trash(None))
+}
+
+/// Tray menu labels in the UI language, sent by the frontend whenever the language changes.
+#[derive(serde::Deserialize)]
+pub struct TrayLabels {
+    pub quick: String,
+    pub notebook: String,
+    pub settings: String,
+    pub quit: String,
+}
+
+#[tauri::command]
+pub fn set_tray_labels(app: AppHandle, labels: TrayLabels) -> CmdResult<()> {
+    crate::tray::set_labels(&app, &labels).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn restore_note(app: AppHandle, state: State<AppState>, trash_path: String, original_path: String) -> CmdResult<()> {
     with_store(&state, |s| s.restore(&trash_path, &original_path))?;
     changed(&app);

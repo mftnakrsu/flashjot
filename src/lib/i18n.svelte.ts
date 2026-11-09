@@ -55,6 +55,16 @@ const en = {
   "set.language": "Language",
   "set.auto": "Automatic",
   "set.launch": "Start Flashjot when I log in",
+  "set.trash": "Trash",
+  "set.trashHint": "Deleted notes are kept for 30 days, then removed when Flashjot starts.",
+  "set.trashCount": "{n} deleted notes",
+  "set.trashEmpty": "Empty trash",
+  "set.trashConfirm": "Click again to delete {n} notes for good",
+  "set.trashDone": "Trash emptied",
+  "tray.quick": "Quick note",
+  "tray.notebook": "Notebook",
+  "tray.settings": "Settings",
+  "tray.quit": "Quit Flashjot",
   "set.save": "Save",
   "set.saved": "Settings saved",
   "set.problem": "Some settings could not be applied:",
@@ -62,6 +72,7 @@ const en = {
     "On Wayland, global shortcuts may not work. Bind “flashjot --quick” and “flashjot --notebook” in your desktop's keyboard settings instead.",
   "set.gnomeD": "On Ubuntu and GNOME, Ctrl+Alt+D may already mean “Show desktop”. If the notebook doesn't open, pick another shortcut.",
   "err.generic": "Something went wrong: {e}",
+  "err.reservedName": "That name can't be used: Windows reserves it (CON, NUL, COM1…) or it ends with a dot.",
 };
 
 type Key = keyof typeof en;
@@ -121,6 +132,16 @@ const tr: Record<Key, string> = {
   "set.language": "Dil",
   "set.auto": "Otomatik",
   "set.launch": "Oturum açtığımda Flashjot'u başlat",
+  "set.trash": "Çöp kutusu",
+  "set.trashHint": "Silinen notlar 30 gün saklanır, sonra Flashjot açılırken kaldırılır.",
+  "set.trashCount": "{n} silinmiş not",
+  "set.trashEmpty": "Çöpü boşalt",
+  "set.trashConfirm": "{n} notu kalıcı olarak silmek için tekrar tıkla",
+  "set.trashDone": "Çöp kutusu boşaltıldı",
+  "tray.quick": "Hızlı not",
+  "tray.notebook": "Defter",
+  "tray.settings": "Ayarlar",
+  "tray.quit": "Flashjot'tan çık",
   "set.save": "Kaydet",
   "set.saved": "Ayarlar kaydedildi",
   "set.problem": "Bazı ayarlar uygulanamadı:",
@@ -128,6 +149,7 @@ const tr: Record<Key, string> = {
     "Wayland'de global kısayollar çalışmayabilir. Bunun yerine masaüstü klavye ayarlarından “flashjot --quick” ve “flashjot --notebook” komutlarına kısayol ata.",
   "set.gnomeD": "Ubuntu ve GNOME'da Ctrl+Alt+D zaten “Masaüstünü göster” olabilir. Defter açılmazsa başka bir kısayol seç.",
   "err.generic": "Bir şeyler ters gitti: {e}",
+  "err.reservedName": "Bu ad kullanılamaz: Windows bunu ayırmış (CON, NUL, COM1…) ya da ad noktayla bitiyor.",
 };
 
 const dictionaries = { en, tr } as const;

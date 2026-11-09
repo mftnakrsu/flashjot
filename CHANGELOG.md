@@ -6,6 +6,19 @@ All notable changes to Flashjot are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Empty trash** in Settings. Deleted notes are now removed for good 30 days after deletion,
+  when Flashjot starts. (#15)
+- The tray menu follows the UI language. (#13)
+
+### Changed
+
+- The release build is optimised for size: the Linux binary went from 8.2 MB to 5.9 MB and the
+  `.deb` from 3.9 MB to 3.1 MB. (#14)
+- Removed unused dependencies and webview permissions, and narrowed the content security
+  policy. (#11, #12)
+
 ### Documentation
 
 - On Ubuntu and GNOME, `Ctrl+Alt+D` can be taken by *Show desktop*. The docs, the README and
@@ -15,6 +28,11 @@ All notable changes to Flashjot are listed here. The format follows
 
 - On Linux, `Ctrl+Z` undoes and `Ctrl+Shift+Z` / `Ctrl+Y` redo in the quick box, page titles and
   other text fields. WebKitGTK leaves these keys to the app, so they did nothing before.
+- The Inbox stays in time order after a quick note is renamed; renamed notes are placed by
+  their file time. (#17)
+- Pages with `:` in the name, created by other apps on Linux or macOS, open again. Names that
+  Windows reserves (`CON`, `NUL`, `COM1`…) or that end in a dot are refused with a clear
+  message. (#16)
 
 ## [0.2.0] - 2026-10-20
 
