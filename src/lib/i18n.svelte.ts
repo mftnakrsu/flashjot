@@ -70,6 +70,7 @@ const en = {
   "set.problem": "Some settings could not be applied:",
   "set.wayland":
     "On Wayland, global shortcuts may not work. Bind “flashjot --quick” and “flashjot --notebook” in your desktop's keyboard settings instead.",
+  "set.gnomeD": "On Ubuntu and GNOME, Ctrl+Alt+D may already mean “Show desktop”. If the notebook doesn't open, pick another shortcut.",
   "err.generic": "Something went wrong: {e}",
   "err.reservedName": "That name can't be used: Windows reserves it (CON, NUL, COM1…) or it ends with a dot.",
 };
@@ -146,6 +147,7 @@ const tr: Record<Key, string> = {
   "set.problem": "Bazı ayarlar uygulanamadı:",
   "set.wayland":
     "Wayland'de global kısayollar çalışmayabilir. Bunun yerine masaüstü klavye ayarlarından “flashjot --quick” ve “flashjot --notebook” komutlarına kısayol ata.",
+  "set.gnomeD": "Ubuntu ve GNOME'da Ctrl+Alt+D zaten “Masaüstünü göster” olabilir. Defter açılmazsa başka bir kısayol seç.",
   "err.generic": "Bir şeyler ters gitti: {e}",
   "err.reservedName": "Bu ad kullanılamaz: Windows bunu ayırmış (CON, NUL, COM1…) ya da ad noktayla bitiyor.",
 };
