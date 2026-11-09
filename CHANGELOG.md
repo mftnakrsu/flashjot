@@ -6,6 +6,13 @@ All notable changes to Flashjot are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The release build is optimised for size: the Linux binary went from 8.2 MB to 5.9 MB and the
+  `.deb` from 3.9 MB to 3.1 MB. (#14)
+- Removed unused dependencies and webview permissions, and narrowed the content security
+  policy. (#11, #12)
+
 ### Fixed
 
 - On Linux, `Ctrl+Z` undoes and `Ctrl+Shift+Z` / `Ctrl+Y` redo in the quick box, page titles and
