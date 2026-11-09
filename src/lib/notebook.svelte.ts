@@ -176,6 +176,7 @@ class Notebook {
   }
 
   error(e: unknown) {
+    if (String(e) === api.RESERVED_NAME) return this.notify(t("err.reservedName"), "error");
     this.notify(t("err.generic", { e: String(e) }), "error");
   }
 }
