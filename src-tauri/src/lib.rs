@@ -84,6 +84,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::add_quick_note,
+            commands::add_inbox_note,
             commands::list_inbox,
             commands::get_tree,
             commands::read_note,

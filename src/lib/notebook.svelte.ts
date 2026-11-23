@@ -71,6 +71,14 @@ class Notebook {
     }
   }
 
+  /** Called by the editor when the open page is gone on disk (moved, renamed or deleted in
+   *  another app): shows the Inbox and reloads the lists. Doesn't flush: the editor calls this
+   *  from inside its save queue, and has nothing left to save for this page. */
+  pageGone(path: string) {
+    if (this.view.kind === "page" && this.view.path === path) this.view = { kind: "inbox" };
+    return this.refresh();
+  }
+
   openPage(path: string) {
     return this.show({ kind: "page", path });
   }

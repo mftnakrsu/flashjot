@@ -129,6 +129,16 @@ pub fn add_quick_note(app: AppHandle, state: State<AppState>, text: String, task
     Ok(saved)
 }
 
+/// A new Inbox note with exactly this text, never read as tasks: the editor keeps typing here
+/// that it could not save to its page (changed or gone on disk).
+#[tauri::command]
+pub fn add_inbox_note(app: AppHandle, state: State<AppState>, text: String) -> CmdResult<NoteMeta> {
+    let now = chrono::Local::now().naive_local();
+    let meta = with_store(&state, |s| s.add_inbox(&text, now))?;
+    changed(&app);
+    Ok(meta)
+}
+
 #[tauri::command(async)]
 pub fn list_inbox(state: State<AppState>) -> CmdResult<Vec<NoteMeta>> {
     with_store(&state, |s| s.list_inbox())

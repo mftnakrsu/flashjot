@@ -49,6 +49,9 @@ export type QuickSaved = { kind: "note"; path: string } | { kind: "tasks"; path:
 export const addQuickNote = (text: string, tasksTitle: string) =>
   invoke<QuickSaved>("add_quick_note", { text, tasksTitle });
 
+/** A new Inbox note with exactly this text (no "[]" task parsing); fails if it is blank. */
+export const addInboxNote = (text: string) => invoke<NoteMeta>("add_inbox_note", { text });
+
 export interface Task {
   line: number;
   text: string;
@@ -73,6 +76,8 @@ export const writeNote = (path: string, content: string, modified: number) =>
   invoke<number>("write_note", { path, content, modified });
 /** StoreError::Conflict in crates/core/src/store.rs. */
 export const CONFLICT = "note changed on disk";
+/** StoreError::NotFound: the page was moved, renamed or deleted (e.g. in another app). */
+export const NOT_FOUND = "note not found";
 /** The error for names Windows can't use (CON, NUL, COM1…). */
 export const RESERVED_NAME = "reserved name";
 export const createFolder = (name: string) => invoke<void>("create_folder", { name });
