@@ -113,8 +113,8 @@ You can pick another folder in **Settings**. Settings are stored in a small JSON
 ## Use with AI agents
 
 Flashjot ships `flashjot-mcp`, an MCP server, so Claude Code, Claude Desktop, Cursor and other
-agents can capture, read, search and organise your notes with the app's own rules. Nothing is ever
-deleted for good. Setup: [flashjot.mefby.com/guide/ai-agents](https://flashjot.mefby.com/guide/ai-agents/).
+agents can capture, read, search and organise your notes with the app's own rules. It can't empty
+the trash, and it never overwrites a page that changed since it read it. Setup: [flashjot.mefby.com/guide/ai-agents](https://flashjot.mefby.com/guide/ai-agents/).
 
 ```bash
 claude mcp add flashjot -- /usr/bin/flashjot-mcp   # path depends on your system, see the guide

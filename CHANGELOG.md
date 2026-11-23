@@ -9,7 +9,8 @@ All notable changes to Flashjot are listed here. The format follows
 ### Added
 
 - The notebook updates when notes change outside Flashjot: the sidebar, the Inbox and the open page (#21).
-- flashjot-mcp: an MCP server so AI agents (Claude Code, Claude Desktop, Cursor…) can capture, read, search and organise your notes, with the app's own rules. Nothing is ever deleted for good.
+  If the open page changes or goes away outside Flashjot while you type, your unsaved typing is kept as a new Inbox note.
+- flashjot-mcp: an MCP server so AI agents (Claude Code, Claude Desktop, Cursor…) can capture, read, search and organise your notes, with the app's own rules. It can't empty the trash, and write-note is refused if the page changed on disk since the agent read it.
 - Installers include flashjot-mcp; the release page also has it on its own for each system.
 
 ### Changed

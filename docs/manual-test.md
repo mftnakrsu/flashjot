@@ -31,7 +31,7 @@ Run this on each OS before a release. Use a scratch notes folder (Settings → N
 - [ ] A page named `CON` or `nul.md` is refused with a clear message, not a raw error (#16).
 - [ ] With the notebook open, create `Idea.md` in the notes folder from a terminal or another editor: it appears in the sidebar within a second (#21).
 - [ ] Add a file to `Inbox/` from outside: the Inbox shows it and the count goes up.
-- [ ] Open a page in Flashjot, change and save it in another editor: Flashjot shows the new text within a second; typing in Flashjot meanwhile is not lost (the conflict message shows instead).
+- [ ] Open a page in Flashjot, change and save it in another editor: Flashjot shows the new text within a second; if you were typing in Flashjot meanwhile, your unsaved typing is kept as a new Inbox note and the disk version loads; the outside edit is never overwritten.
 - [ ] Typing in a page never makes it jump or reload by itself.
 - [ ] Light and dark system themes both look right.
 

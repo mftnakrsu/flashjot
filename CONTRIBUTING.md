@@ -13,7 +13,7 @@ Thanks for helping. A few things keep the project easy to work on.
 ```sh
 npm install
 npm run tauri dev
-npm test          # cargo test: store + settings
+npm test          # cargo test --workspace: the whole workspace
 npm run check     # svelte-check
 ```
 
