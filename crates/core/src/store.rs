@@ -723,7 +723,8 @@ fn rel_string(root: &Path, path: &Path) -> String {
         .join("/")
 }
 
-fn modified_ms(path: &Path) -> i64 {
+/// Modification time in milliseconds since the Unix epoch, as `read` and `write` report it; 0 if unknown.
+pub fn modified_ms(path: &Path) -> i64 {
     fs::metadata(path)
         .and_then(|m| m.modified())
         .ok()

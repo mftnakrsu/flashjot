@@ -43,7 +43,7 @@ class Notebook {
   folderNames = $derived(this.tree.folders.map((f) => f.name));
 
   /** Runs on every notes-changed event: each command that changes notes emits it, and so does
-   *  the notes-folder watcher when another app changes a file (and after our own autosaves). */
+   *  the notes-folder watcher when another app changes a file (it drops the echo of our autosaves). */
   async refresh() {
     try {
       await this.reloadOpen();
@@ -60,8 +60,8 @@ class Notebook {
   async show(view: View) {
     await this.flush();
     this.view = view;
-    // Autosave's notes-changed comes from the folder watcher a moment after the write, so
-    // previews of notes edited just now may still be stale; reload the Inbox right away.
+    // Autosave doesn't cause notes-changed (the folder watcher drops its echo), so previews
+    // of notes edited just now may be stale; reload the Inbox right away.
     if (view.kind === "inbox") {
       try {
         this.inbox = await api.listInbox();

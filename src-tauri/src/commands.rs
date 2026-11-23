@@ -16,13 +16,21 @@ pub struct AppState {
     pub settings_path: PathBuf,
     /// Watches the notes folder; replaced when the folder changes, dropped to stop.
     pub watch: Mutex<Option<watch::Watch>>,
+    /// Autosaves, so the watcher can drop their echo (see `watch_notes`).
+    pub own_writes: Mutex<watch::OwnWrites>,
 }
 
 impl AppState {
     pub fn new(settings_path: PathBuf) -> Self {
         let settings = settings::load(&settings_path);
         let store = open_store(notes_root(&settings), default_root());
-        AppState { store: Mutex::new(store), settings: Mutex::new(settings), settings_path, watch: Mutex::new(None) }
+        AppState {
+            store: Mutex::new(store),
+            settings: Mutex::new(settings),
+            settings_path,
+            watch: Mutex::new(None),
+            own_writes: Mutex::new(watch::OwnWrites::default()),
+        }
     }
 }
 
@@ -44,14 +52,30 @@ fn changed(app: &AppHandle) {
 }
 
 /// (Re)starts watching the notes folder, so changes other apps make (an editor, a sync
-/// client, flashjot-mcp) reach the windows as `notes-changed`.
+/// client, flashjot-mcp) reach the windows as `notes-changed`. A batch holding only our own
+/// autosaves is dropped: the editor already shows that text, and a refresh would rescan the
+/// whole notebook while holding the store lock that the next autosave waits for.
 pub fn watch_notes(app: &AppHandle) {
     let state = app.state::<AppState>();
     let Ok(root) = state.store.lock().map(|s| s.root().to_path_buf()) else { return };
     // Some systems report canonical paths (macOS: /private/var/… for /var/…).
     let root = root.canonicalize().unwrap_or(root);
+    if let Ok(mut own) = state.own_writes.lock() {
+        own.clear();
+    }
     let handle = app.clone();
-    let watch = match watch::spawn(&root, move || changed(&handle)) {
+    let base = root.clone();
+    let on_change = move |paths: Option<&[PathBuf]>| {
+        let echo = paths.is_some_and(|paths| {
+            let state = handle.state::<AppState>();
+            let own = state.own_writes.lock();
+            own.is_ok_and(|own| own.is_echo(&base, paths, store::modified_ms))
+        });
+        if !echo {
+            changed(&handle);
+        }
+    };
+    let watch = match watch::spawn(&root, on_change) {
         Ok(w) => Some(w),
         Err(e) => {
             eprintln!("flashjot: not watching {}: {e:?}", root.display());
@@ -120,12 +144,16 @@ pub fn read_note(state: State<AppState>, path: String) -> CmdResult<Note> {
     with_store(&state, |s| s.read(&path))
 }
 
-/// Autosave target. Emits nothing itself: the notes-folder watcher reports the write as `notes-changed`
-/// a moment later, and the editor ignores it because the time returned here is the time on disk.
+/// Autosave target. Emits nothing, and the notes-folder watcher drops the echo of this write
+/// (see `watch_notes`), so typing never reloads the lists or the editor.
 /// `modified` is the time from `read_note` or the last save; returns the new one.
 #[tauri::command]
 pub fn write_note(state: State<AppState>, path: String, content: String, modified: Option<i64>) -> CmdResult<i64> {
-    with_store(&state, |s| s.write(&path, &content, modified))
+    let next = with_store(&state, |s| s.write(&path, &content, modified))?;
+    if let Ok(mut own) = state.own_writes.lock() {
+        own.record(&path, next);
+    }
+    Ok(next)
 }
 
 #[tauri::command]
