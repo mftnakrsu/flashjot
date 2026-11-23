@@ -1006,7 +1006,7 @@ name = "flashjot"
 version = "0.3.0"
 dependencies = [
  "chrono",
- "dirs 7.0.0",
+ "flashjot-core",
  "gdkx11",
  "gtk",
  "serde",
@@ -1017,6 +1017,17 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
+ "tempfile",
+]
+
+[[package]]
+name = "flashjot-core"
+version = "0.3.0"
+dependencies = [
+ "chrono",
+ "dirs 7.0.0",
+ "serde",
+ "serde_json",
  "tempfile",
 ]
 

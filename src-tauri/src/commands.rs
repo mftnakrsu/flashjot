@@ -1,8 +1,9 @@
 //! Tauri commands called from the frontend. Thin wrappers around `store` and `settings`.
 
-use crate::settings::{self, Settings};
-use crate::store::{self, Hit, Note, NoteMeta, Store, TaskGroup, Tree};
 use crate::{shortcuts, windows};
+use flashjot_core::location::{default_root, notes_root, open_store};
+use flashjot_core::settings::{self, Settings};
+use flashjot_core::store::{self, Hit, Note, NoteMeta, Store, TaskGroup, Tree};
 use std::io;
 use std::path::{Path, PathBuf};
 use serde::Serialize;
@@ -21,30 +22,6 @@ impl AppState {
         let store = open_store(notes_root(&settings), default_root());
         AppState { store: Mutex::new(store), settings: Mutex::new(settings), settings_path }
     }
-}
-
-pub fn notes_root(s: &Settings) -> PathBuf {
-    match s.notes_dir.as_deref().map(str::trim) {
-        Some(dir) if !dir.is_empty() => PathBuf::from(dir),
-        _ => default_root(),
-    }
-}
-
-fn default_root() -> PathBuf {
-    dirs::document_dir().or_else(dirs::home_dir).unwrap_or_else(|| PathBuf::from(".")).join("Flashjot")
-}
-
-/// The saved notes folder, or `fallback` if it can't be used (e.g. a removed drive).
-/// The setting is kept, so the folder is used again once it is back.
-fn open_store(root: PathBuf, fallback: PathBuf) -> Store {
-    let store = Store::new(root);
-    let Err(e) = store.ensure() else { return store };
-    eprintln!("flashjot: notes folder {} unusable ({e}), using {}", store.root().display(), fallback.display());
-    let store = Store::new(fallback);
-    if let Err(e) = store.ensure() {
-        eprintln!("flashjot: notes folder {}: {e}", store.root().display());
-    }
-    store
 }
 
 /// Creates the notes folder first, so a folder that can't be created is never saved.
@@ -66,7 +43,7 @@ fn changed(app: &AppHandle) {
 
 fn with_store<T>(
     state: &State<AppState>,
-    f: impl FnOnce(&Store) -> Result<T, crate::store::StoreError>,
+    f: impl FnOnce(&Store) -> Result<T, store::StoreError>,
 ) -> CmdResult<T> {
     let store = state.store.lock().map_err(|e| e.to_string())?;
     f(&store).map_err(|e| e.to_string())
@@ -305,14 +282,5 @@ mod tests {
         assert_eq!(store.root(), d.path().join("notes"));
         assert!(d.path().join("notes/Inbox").is_dir());
         assert_eq!(settings::load(&settings_path), settings);
-    }
-
-    #[test]
-    fn startup_falls_back_when_saved_notes_dir_is_unusable() {
-        let d = tempfile::tempdir().unwrap();
-        let fallback = d.path().join("default");
-        let store = open_store(unusable(&d), fallback.clone());
-        assert_eq!(store.root(), fallback);
-        assert!(fallback.join("Inbox").is_dir());
     }
 }

@@ -1,7 +1,5 @@
 mod commands;
-mod settings;
 mod shortcuts;
-mod store;
 mod tray;
 mod windows;
 

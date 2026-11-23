@@ -1,7 +1,7 @@
 //! Global shortcuts from settings.
 
 use crate::commands::AppState;
-use crate::settings::Settings;
+use flashjot_core::settings::Settings;
 use crate::windows;
 use tauri::{AppHandle, Manager, Wry};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutEvent, ShortcutState};

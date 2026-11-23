@@ -1,0 +1,17 @@
+[package]
+name = "flashjot-core"
+version = "0.3.0"
+description = "Flashjot's notes on disk: the store, settings and where they live. No Tauri dependency."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
