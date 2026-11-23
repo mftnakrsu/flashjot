@@ -6,6 +6,10 @@ All notable changes to Flashjot are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The note store and settings now live in a Tauri-free crate, crates/core (no change for users).
+
 ## [0.3.0] - 2026-11-09
 
 ### Added

@@ -17,7 +17,7 @@ npm test          # cargo test: store + settings
 npm run check     # svelte-check
 ```
 
-- Logic that touches the filesystem goes in `src-tauri/src/store.rs` and **must come with a unit test**. Write the test first.
+- Logic that touches the filesystem goes in `crates/core/src/store.rs` and **must come with a unit test**. Write the test first.
 - UI text goes in `src/lib/i18n.svelte.ts`, with every key in every language.
 - Use the CSS tokens in `src/lib/theme.css` for colors so light and dark themes both work.
 - Before a PR, run through [`docs/manual-test.md`](docs/manual-test.md) on your OS.

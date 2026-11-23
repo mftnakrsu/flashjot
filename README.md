@@ -124,17 +124,18 @@ Then:
 git clone https://github.com/mftnakrsu/flashjot && cd flashjot
 npm install
 npm run tauri dev      # run with hot reload
-npm test               # Rust unit tests for the note store and settings
+npm test               # Rust unit tests (cargo test --workspace)
 npm run check          # Svelte and TypeScript checks
-npm run tauri build    # installers in src-tauri/target/release/bundle/
+npm run tauri build    # installers in target/release/bundle/
 ```
 
 How the code is organized:
 
 | Path | What it does |
 |---|---|
-| `src-tauri/src/store.rs` | Reads and writes notes on disk. Has no Tauri dependency and is fully unit-tested |
-| `src-tauri/src/settings.rs` | Settings file with defaults |
+| `crates/core/src/store.rs` | Reads and writes notes on disk. Has no Tauri dependency and is fully unit-tested |
+| `crates/core/src/settings.rs` | Settings file with defaults |
+| `crates/core/src/location.rs` | Where the settings file and the notes folder are |
 | `src-tauri/src/windows.rs` | Quick box and notebook windows, focus handling |
 | `src-tauri/src/shortcuts.rs`, `tray.rs` | Global shortcuts and the tray menu |
 | `src-tauri/src/commands.rs` | The commands the UI calls |
