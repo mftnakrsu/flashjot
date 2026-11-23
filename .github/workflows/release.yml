@@ -127,14 +127,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_ID: ${{ steps.tauri.outputs.releaseId }}
         run: |
+          set -euo pipefail
+          if [[ -z "$RELEASE_ID" ]]; then
+            echo "::error::tauri-action returned no release id, so flashjot-mcp was not attached."
+            exit 1
+          fi
           T=${{ matrix.target }}
           if [[ $T == *windows* ]]; then
-            NAME=flashjot-mcp-$T.exe
-            cp "target/$T/release/flashjot-mcp.exe" "$NAME"
+            NAME=flashjot-mcp-$T.zip
+            pwsh -NoProfile -Command "Compress-Archive -Path 'target/$T/release/flashjot-mcp.exe' -DestinationPath '$NAME' -Force"
           else
             NAME=flashjot-mcp-$T.tar.gz
             tar -czf "$NAME" -C "target/$T/release" flashjot-mcp
           fi
+          REPO=${{ github.repository }}
+          # A re-run uploads again: remove an asset of the same name first, which GitHub would refuse.
+          for id in $(gh api --paginate "repos/$REPO/releases/$RELEASE_ID/assets" --jq ".[] | select(.name == \"$NAME\") | .id"); do
+            gh api --method DELETE "repos/$REPO/releases/assets/$id"
+          done
           gh api --method POST -H "Content-Type: application/octet-stream" \
-            "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=$NAME" \
+            "https://uploads.github.com/repos/$REPO/releases/$RELEASE_ID/assets?name=$NAME" \
             --input "$NAME"
