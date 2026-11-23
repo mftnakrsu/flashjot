@@ -6,6 +6,10 @@ All notable changes to Flashjot are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The notebook updates when notes change outside Flashjot: the sidebar, the Inbox and the open page (#21).
+
 ### Changed
 
 - The note store and settings now live in a Tauri-free crate, crates/core (no change for users).

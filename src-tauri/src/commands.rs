@@ -120,7 +120,8 @@ pub fn read_note(state: State<AppState>, path: String) -> CmdResult<Note> {
     with_store(&state, |s| s.read(&path))
 }
 
-/// Autosave target; does not emit `notes-changed` to avoid reloading the editor on every keystroke.
+/// Autosave target. Emits nothing itself: the notes-folder watcher reports the write as `notes-changed`
+/// a moment later, and the editor ignores it because the time returned here is the time on disk.
 /// `modified` is the time from `read_note` or the last save; returns the new one.
 #[tauri::command]
 pub fn write_note(state: State<AppState>, path: String, content: String, modified: Option<i64>) -> CmdResult<i64> {

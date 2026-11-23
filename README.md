@@ -149,7 +149,7 @@ How the code is organized:
 
 - [ ] Optional SQLite storage backend for very large notebooks, behind the same `store` interface ([#22](https://github.com/mftnakrsu/flashjot/issues/22))
 - [ ] Wayland global shortcuts through the XDG GlobalShortcuts portal ([#20](https://github.com/mftnakrsu/flashjot/issues/20))
-- [ ] Watch the notes folder and reload pages edited in other apps ([#21](https://github.com/mftnakrsu/flashjot/issues/21))
+- [x] Watch the notes folder and reload pages edited in other apps ([#21](https://github.com/mftnakrsu/flashjot/issues/21))
 - [ ] Tags and `#hashtags` ([#23](https://github.com/mftnakrsu/flashjot/issues/23))
 - [ ] Images and attachments ([#24](https://github.com/mftnakrsu/flashjot/issues/24))
 - [ ] Sync, using any folder-sync tool for now; built-in later ([#25](https://github.com/mftnakrsu/flashjot/issues/25))

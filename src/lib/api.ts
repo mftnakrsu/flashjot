@@ -71,7 +71,7 @@ export const readNote = (path: string) => invoke<Note>("read_note", { path });
 /** Fails with CONFLICT if the file changed on disk since `modified`; returns the new time. */
 export const writeNote = (path: string, content: string, modified: number) =>
   invoke<number>("write_note", { path, content, modified });
-/** StoreError::Conflict in src-tauri/src/store.rs. */
+/** StoreError::Conflict in crates/core/src/store.rs. */
 export const CONFLICT = "note changed on disk";
 /** The error for names Windows can't use (CON, NUL, COM1…). */
 export const RESERVED_NAME = "reserved name";

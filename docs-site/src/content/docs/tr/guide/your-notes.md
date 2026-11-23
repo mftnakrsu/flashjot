@@ -29,15 +29,16 @@ Belgeler/Flashjot/
 - Kenar çubuğundaki bir **klasör**, diskte bir klasördür. İç içe klasörler de çalışır.
 - `.md` ile bitmeyen dosyalar ve adı nokta ile başlayan klasörler yok sayılır.
 
+Flashjot bu dosyalar başka bir programla değiştirildiğinde bunu fark eder: kenar çubuğu, Gelen Kutusu
+ve açık sayfa bir saniye içinde güncellenir.
+
 ## Flashjot dışında düzenlemek
 
 Dosyaları herhangi bir editörle düzenleyebilir ya da Obsidian'ı aynı klasöre yönlendirebilirsin.
-Kenar çubuğu klasörü, defter açıldığında ve Flashjot'ta bir not eklediğin, yeniden adlandırdığın,
-taşıdığın ya da sildiğin her seferde yeniden okur; başka yerde oluşturulan dosyalar o zaman
-görünür. Sen başka yerde düzenlerken Flashjot'ta açık olan bir sayfa henüz kendiliğinden yenilenmez;
-başka bir sayfaya geçip geri dön. Flashjot bu dışarıdaki değişikliklerin üzerine asla yazmaz: diskte
-değişmiş bir sayfaya yazarsan bunu söyler ve kaydetmek yerine diskteki sürümü yükler. Klasördeki
-değişiklikleri izlemek [yol haritasında](/tr/roadmap/).
+Flashjot'ta açık olan bir sayfayı başka yerde değiştirirsen, değişiklik kaydedilir kaydedilmez
+sayfada görünür; yeter ki bu arada o sayfaya yazmamış ol. Flashjot bu dışarıdaki değişikliklerin
+üzerine asla yazmaz: diskte değişmiş bir sayfaya yazarsan bunu söyler ve kaydetmek yerine diskteki
+sürümü yükler.
 
 ## Güvenli kayıt
 

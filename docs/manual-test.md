@@ -29,6 +29,10 @@ Run this on each OS before a release. Use a scratch notes folder (Settings → N
 - [ ] Editing the task line elsewhere, then ticking it, shows "This task changed" and reloads the list.
 - [ ] Rename a quick note to `Zebra`: it doesn't jump to the top of the Inbox (#17).
 - [ ] A page named `CON` or `nul.md` is refused with a clear message, not a raw error (#16).
+- [ ] With the notebook open, create `Idea.md` in the notes folder from a terminal or another editor: it appears in the sidebar within a second (#21).
+- [ ] Add a file to `Inbox/` from outside: the Inbox shows it and the count goes up.
+- [ ] Open a page in Flashjot, change and save it in another editor: Flashjot shows the new text within a second; typing in Flashjot meanwhile is not lost (the conflict message shows instead).
+- [ ] Typing in a page never makes it jump or reload by itself.
 - [ ] Light and dark system themes both look right.
 
 ## Settings
