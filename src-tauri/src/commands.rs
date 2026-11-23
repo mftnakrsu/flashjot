@@ -1,6 +1,6 @@
 //! Tauri commands called from the frontend. Thin wrappers around `store` and `settings`.
 
-use crate::{shortcuts, windows};
+use crate::{shortcuts, watch, windows};
 use flashjot_core::location::{default_root, notes_root, open_store};
 use flashjot_core::settings::{self, Settings};
 use flashjot_core::store::{self, Hit, Note, NoteMeta, Store, TaskGroup, Tree};
@@ -14,13 +14,15 @@ pub struct AppState {
     pub store: Mutex<Store>,
     pub settings: Mutex<Settings>,
     pub settings_path: PathBuf,
+    /// Watches the notes folder; replaced when the folder changes, dropped to stop.
+    pub watch: Mutex<Option<watch::Watch>>,
 }
 
 impl AppState {
     pub fn new(settings_path: PathBuf) -> Self {
         let settings = settings::load(&settings_path);
         let store = open_store(notes_root(&settings), default_root());
-        AppState { store: Mutex::new(store), settings: Mutex::new(settings), settings_path }
+        AppState { store: Mutex::new(store), settings: Mutex::new(settings), settings_path, watch: Mutex::new(None) }
     }
 }
 
@@ -39,6 +41,26 @@ type CmdResult<T> = Result<T, String>;
 
 fn changed(app: &AppHandle) {
     let _ = app.emit("notes-changed", ());
+}
+
+/// (Re)starts watching the notes folder, so changes other apps make (an editor, a sync
+/// client, flashjot-mcp) reach the windows as `notes-changed`.
+pub fn watch_notes(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let Ok(root) = state.store.lock().map(|s| s.root().to_path_buf()) else { return };
+    // Some systems report canonical paths (macOS: /private/var/… for /var/…).
+    let root = root.canonicalize().unwrap_or(root);
+    let handle = app.clone();
+    let watch = match watch::spawn(&root, move || changed(&handle)) {
+        Ok(w) => Some(w),
+        Err(e) => {
+            eprintln!("flashjot: not watching {}: {e:?}", root.display());
+            None
+        }
+    };
+    if let Ok(mut slot) = state.watch.lock() {
+        *slot = watch;
+    }
 }
 
 fn with_store<T>(
@@ -217,6 +239,7 @@ pub fn set_settings(app: AppHandle, state: State<AppState>, mut settings: Settin
     }
     let _ = app.emit("settings-changed", ());
     if new_root {
+        watch_notes(&app);
         changed(&app);
     }
     Ok(problems)
