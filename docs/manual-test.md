@@ -46,3 +46,12 @@ Run this on each OS before a release. Use a scratch notes folder (Settings → N
 ## Linux extras
 - [ ] Tray icon is visible on GNOME (with the AppIndicator extension, which Ubuntu ships), KDE and XFCE.
 - [ ] Wayland: `flashjot --quick` bound to a desktop shortcut opens the box.
+
+## MCP server (flashjot-mcp)
+- [ ] `flashjot-mcp --version` prints the version; `--help` prints the usage.
+- [ ] In the MCP Inspector: 14 tools; read-only and destructive hints as in the plan; the instructions show.
+- [ ] From Claude Code: a captured note appears in the open notebook's Inbox within a second.
+- [ ] `[] water the plants` lands on the same Tasks page the quick box uses.
+- [ ] Edit a page in Flashjot after the agent read it; the agent's write-note is refused with "changed since it was read".
+- [ ] trash-note then restore-note brings the page back where it was.
+- [ ] The settings file is unchanged after a session (`sha256sum` before and after).
