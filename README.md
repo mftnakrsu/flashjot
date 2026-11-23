@@ -110,6 +110,16 @@ Documents/Flashjot/
 
 You can pick another folder in **Settings**. Settings are stored in a small JSON file in your system's app config folder.
 
+## Use with AI agents
+
+Flashjot ships `flashjot-mcp`, an MCP server, so Claude Code, Claude Desktop, Cursor and other
+agents can capture, read, search and organise your notes with the app's own rules. Nothing is ever
+deleted for good. Setup: [flashjot.mefby.com/guide/ai-agents](https://flashjot.mefby.com/guide/ai-agents/).
+
+```bash
+claude mcp add flashjot -- /usr/bin/flashjot-mcp   # path depends on your system, see the guide
+```
+
 ## Build from source
 
 Requirements: [Rust](https://rustup.rs) 1.90+, Node.js 20+, and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS. On Debian, Ubuntu or Pardus:

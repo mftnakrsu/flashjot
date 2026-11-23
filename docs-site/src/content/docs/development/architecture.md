@@ -23,6 +23,8 @@ Svelte UI ───────────────┘ ◀──────
 The Rust code is a Cargo workspace. `crates/core` (`flashjot-core`) holds everything about the
 notes on disk and has no Tauri dependency; the app in `src-tauri/` uses it.
 
+`crates/mcp` (`flashjot-mcp`) is the MCP server: `notebook.rs` maps each tool onto `flashjot-core`, `server.rs` defines the tools with `rmcp`.
+
 | File | Responsibility |
 |---|---|
 | `store.rs` (in `crates/core/src/`) | Everything on disk: list folders and pages, read, write, create, rename, move, trash and restore, search. Validates every path coming from the UI and writes atomically. It has no Tauri dependency, so it is unit-tested with temporary folders. |
