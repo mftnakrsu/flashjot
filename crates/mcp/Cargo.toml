@@ -1,0 +1,20 @@
+[package]
+name = "flashjot-mcp"
+version = "0.3.0"
+description = "MCP server for Flashjot: lets AI agents capture, read, search and organise your notes."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+flashjot-core = { path = "../core" }
+rmcp = { version = "3.11.0", features = ["server", "macros", "transport-io"] }
+tokio = { version = "1", features = ["macros", "rt", "io-std"] }
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+sys-locale = "0.3.2"
+
+[dev-dependencies]
+tempfile.workspace = true
