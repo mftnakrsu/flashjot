@@ -3,12 +3,18 @@
 
 use serde_json::{Value, json};
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
+use std::time::{Duration, Instant};
+
+/// How long a request may wait for its reply before the test fails.
+const REPLY_TIMEOUT: Duration = Duration::from_secs(10);
 
 struct Client {
     child: Child,
     stdin: ChildStdin,
-    stdout: BufReader<ChildStdout>,
+    /// Lines the server printed, read on their own thread so a silent server can time out.
+    lines: Receiver<String>,
     next_id: u64,
 }
 
@@ -24,7 +30,15 @@ impl Client {
             .unwrap();
         let stdin = child.stdin.take().unwrap();
         let stdout = BufReader::new(child.stdout.take().unwrap());
-        Client { child, stdin, stdout, next_id: 1 }
+        let (tx, lines) = mpsc::channel();
+        std::thread::spawn(move || {
+            for line in stdout.lines().map_while(Result::ok) {
+                if tx.send(line).is_err() {
+                    break;
+                }
+            }
+        });
+        Client { child, stdin, lines, next_id: 1 }
     }
 
     fn send(&mut self, msg: Value) {
@@ -36,9 +50,13 @@ impl Client {
         let id = self.next_id;
         self.next_id += 1;
         self.send(json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params }));
+        let deadline = Instant::now() + REPLY_TIMEOUT;
         loop {
-            let mut line = String::new();
-            assert!(self.stdout.read_line(&mut line).unwrap() > 0, "server closed stdout");
+            let line = match self.lines.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+                Ok(line) => line,
+                Err(RecvTimeoutError::Timeout) => panic!("no reply to {method} (id {id}) within {REPLY_TIMEOUT:?}"),
+                Err(RecvTimeoutError::Disconnected) => panic!("server closed stdout"),
+            };
             let msg: Value = serde_json::from_str(&line).unwrap();
             if msg["id"] == id {
                 return msg;
