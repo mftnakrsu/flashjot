@@ -141,7 +141,7 @@ impl Store {
         }
         let path = match stored.and_then(|rel| self.existing(rel).ok()) {
             Some(path) => path,
-            None => self.root.join(format!("{}.md", valid_name(default_title)?)),
+            None => self.resolve(&format!("{}.md", valid_name(default_title)?))?,
         };
         let mut content = match fs::read_to_string(&path) {
             Ok(c) => c,
@@ -1100,6 +1100,18 @@ mod tests {
     fn add_tasks_rejects_an_empty_list() {
         let (_d, s) = store();
         assert!(matches!(s.add_tasks(None, "Tasks", &[]), Err(StoreError::Empty)));
+    }
+
+    /// The default Tasks page gets the same symlink check as every other path.
+    #[cfg(unix)]
+    #[test]
+    fn add_tasks_refuses_a_default_page_linked_outside_the_root() {
+        let (d, s) = store();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("Tasks.md"), "theirs\n").unwrap();
+        std::os::unix::fs::symlink(outside.path().join("Tasks.md"), d.path().join("Tasks.md")).unwrap();
+        assert!(matches!(s.add_tasks(None, "Tasks", &["a".into()]), Err(StoreError::InvalidPath)));
+        assert_eq!(fs::read_to_string(outside.path().join("Tasks.md")).unwrap(), "theirs\n");
     }
 
     #[test]
