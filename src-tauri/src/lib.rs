@@ -1,6 +1,9 @@
 mod commands;
 mod shortcuts;
 mod tray;
+// Task 4 wires the watcher into the app; delete this attribute then (the compiler will say so).
+#[cfg_attr(not(test), expect(dead_code, reason = "not wired into the app yet"))]
+mod watch;
 mod windows;
 
 use commands::AppState;
