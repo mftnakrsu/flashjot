@@ -63,9 +63,13 @@ impl OwnWrites {
 
     /// True when every path in `changed` is a page we saved and its time on disk (`modified_of`)
     /// is still the one our save left, i.e. nobody else wrote it since.
+    /// A folder that holds another changed path is left out: Windows reports a folder as
+    /// modified whenever a page inside it is saved.
     pub fn is_echo(&self, root: &Path, changed: &[PathBuf], modified_of: impl Fn(&Path) -> i64) -> bool {
-        !changed.is_empty()
-            && changed.iter().all(|path| {
+        let holds_another = |dir: &PathBuf| changed.iter().any(|p| p != dir && p.starts_with(dir));
+        let pages: Vec<&PathBuf> = changed.iter().filter(|p| !(holds_another(p) && p.is_dir())).collect();
+        !pages.is_empty()
+            && pages.iter().all(|path| {
                 let Ok(rel) = path.strip_prefix(root) else { return false };
                 self.0.get(rel).is_some_and(|&m| m == modified_of(path))
             })
@@ -114,10 +118,15 @@ mod tests {
         let mut own = OwnWrites::default();
         own.record("Ideas/a.md", 100);
         own.record("b.md", 200);
-        let disk = |p: &Path| match p.to_str().unwrap() {
-            "/n/Ideas/a.md" => 100,
-            "/n/b.md" => 200,
-            _ => 7,
+        // Compare as paths, not strings: on Windows `join` gives "/n\Ideas/a.md".
+        let disk = |p: &Path| {
+            if p == Path::new("/n/Ideas/a.md") {
+                100
+            } else if p == Path::new("/n/b.md") {
+                200
+            } else {
+                7
+            }
         };
         assert!(own.is_echo(root, &[root.join("Ideas/a.md")], disk));
         assert!(own.is_echo(root, &[root.join("Ideas/a.md"), root.join("b.md")], disk));
@@ -166,6 +175,21 @@ mod tests {
         std::fs::write(root.join("Idea.md"), "hello\n").unwrap();
         let paths = rx.recv_timeout(Duration::from_secs(5)).expect("notes-changed after a write");
         assert_eq!(paths, Some(vec![root.join("Idea.md")]));
+    }
+
+    #[test]
+    fn the_parent_folder_reported_with_our_save_is_still_an_echo() {
+        // Windows reports the folder as modified next to the page saved inside it.
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path();
+        std::fs::create_dir(root.join("Ideas")).unwrap();
+        let mut own = OwnWrites::default();
+        own.record("Ideas/a.md", 100);
+        let disk = |_: &Path| 100;
+        assert!(own.is_echo(root, &[root.join("Ideas"), root.join("Ideas").join("a.md")], disk));
+        // The folder alone, or next to a page we didn't save, is a real change.
+        assert!(!own.is_echo(root, &[root.join("Ideas")], disk));
+        assert!(!own.is_echo(root, &[root.join("Ideas"), root.join("Ideas").join("b.md")], disk));
     }
 
     #[test]
