@@ -146,7 +146,12 @@ impl Notebook {
     }
 
     pub fn set_task(&self, path: &str, line: usize, text: &str, done: bool) -> Result<(), ToolError> {
-        self.store.set_task(path, line, text, done).map_err(|e| message(e, path))
+        self.store.set_task(path, line, text, done).map_err(|e| match e {
+            StoreError::Conflict => {
+                ToolError("That line no longer holds this task. Call open-tasks again and use the line it returns.".into())
+            }
+            e => message(e, path),
+        })
     }
 
     /// Replaces an existing note, only if it is unchanged since `modified` (from `read`).
@@ -344,7 +349,9 @@ mod tests {
         let groups = nb.open_tasks().unwrap();
         assert_eq!(groups[0].path, "Tasks.md");
         let bread = &groups[0].tasks[1];
-        assert!(nb.set_task("Tasks.md", bread.line, "milk", true).is_err());
+        let ToolError(refused) = nb.set_task("Tasks.md", bread.line, "milk", true).unwrap_err();
+        assert!(refused.contains("open-tasks"), "{refused}");
+        assert!(!refused.contains("read-note"), "{refused}");
         nb.set_task("Tasks.md", bread.line, &bread.text, true).unwrap();
         assert_eq!(file(&nb, "Tasks.md"), "- [ ] milk\n- [x] bread\n");
     }
