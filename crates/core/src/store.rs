@@ -141,7 +141,7 @@ impl Store {
         }
         let path = match stored.and_then(|rel| self.existing(rel).ok()) {
             Some(path) => path,
-            None => self.root.join(format!("{}.md", valid_name(default_title)?)),
+            None => self.resolve(&format!("{}.md", valid_name(default_title)?))?,
         };
         let mut content = match fs::read_to_string(&path) {
             Ok(c) => c,
@@ -213,6 +213,12 @@ impl Store {
         let dir = self.folder_dir(name)?;
         fs::create_dir_all(dir)?;
         Ok(())
+    }
+
+    /// The check `create_page` and `move_to` make on `folder`, without creating anything, so a
+    /// caller can tell a refused folder from a refused title or note path.
+    pub fn check_folder(&self, folder: &str) -> Result<(), StoreError> {
+        self.folder_dir(folder).map(|_| ())
     }
 
     pub fn create_page(&self, folder: &str, title: &str) -> Result<NoteMeta, StoreError> {
@@ -717,7 +723,8 @@ fn rel_string(root: &Path, path: &Path) -> String {
         .join("/")
 }
 
-fn modified_ms(path: &Path) -> i64 {
+/// Modification time in milliseconds since the Unix epoch, as `read` and `write` report it; 0 if unknown.
+pub fn modified_ms(path: &Path) -> i64 {
     fs::metadata(path)
         .and_then(|m| m.modified())
         .ok()
@@ -887,6 +894,17 @@ mod tests {
         assert!(matches!(s.create_page("Ideas", "  "), Err(StoreError::InvalidName)));
         assert!(matches!(s.create_page("Ideas", ".hidden"), Err(StoreError::InvalidName)));
         assert!(matches!(s.create_page("../up", "x"), Err(StoreError::InvalidName)));
+    }
+
+    #[test]
+    fn check_folder_validates_without_creating_anything() {
+        let (d, s) = store();
+        assert!(s.check_folder("").is_ok());
+        assert!(s.check_folder("Ideas/Sub").is_ok());
+        assert!(matches!(s.check_folder("../up"), Err(StoreError::InvalidName)));
+        assert!(matches!(s.check_folder(TRASH), Err(StoreError::InvalidName)));
+        assert!(matches!(s.check_folder("con"), Err(StoreError::ReservedName)));
+        assert!(!d.path().join("Ideas").exists());
     }
 
     #[test]
@@ -1083,6 +1101,18 @@ mod tests {
     fn add_tasks_rejects_an_empty_list() {
         let (_d, s) = store();
         assert!(matches!(s.add_tasks(None, "Tasks", &[]), Err(StoreError::Empty)));
+    }
+
+    /// The default Tasks page gets the same symlink check as every other path.
+    #[cfg(unix)]
+    #[test]
+    fn add_tasks_refuses_a_default_page_linked_outside_the_root() {
+        let (d, s) = store();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("Tasks.md"), "theirs\n").unwrap();
+        std::os::unix::fs::symlink(outside.path().join("Tasks.md"), d.path().join("Tasks.md")).unwrap();
+        assert!(matches!(s.add_tasks(None, "Tasks", &["a".into()]), Err(StoreError::InvalidPath)));
+        assert_eq!(fs::read_to_string(outside.path().join("Tasks.md")).unwrap(), "theirs\n");
     }
 
     #[test]

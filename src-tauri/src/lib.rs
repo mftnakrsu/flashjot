@@ -1,8 +1,7 @@
 mod commands;
-mod settings;
 mod shortcuts;
-mod store;
 mod tray;
+mod watch;
 mod windows;
 
 use commands::AppState;
@@ -77,6 +76,7 @@ pub fn run() {
                 eprintln!("flashjot: {e}");
             }
             purge_old_trash(&handle);
+            commands::watch_notes(&handle);
 
             let args: Vec<String> = std::env::args().collect();
             handle_args(&handle, &args, true);
@@ -84,6 +84,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::add_quick_note,
+            commands::add_inbox_note,
             commands::list_inbox,
             commands::get_tree,
             commands::read_note,

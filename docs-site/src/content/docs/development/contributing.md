@@ -17,7 +17,7 @@ reports, fixes, translations and features.
 ## Workflow
 
 1. Set up the project as described in [Build from source](/development/building/).
-2. Logic that touches the filesystem goes in `src-tauri/src/store.rs` and comes with a unit test.
+2. Logic that touches the filesystem goes in `crates/core/src/store.rs` and comes with a unit test.
    Write the test first.
 3. Interface text goes in `src/lib/i18n.svelte.ts`, with every key in every language.
 4. Use the colour tokens in `src/lib/theme.css` so light and dark mode both work.

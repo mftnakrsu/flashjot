@@ -36,9 +36,9 @@ the “start when I log in” setting.
 ## Checks
 
 ```bash
-npm test          # Rust unit tests: note store and settings (cargo test)
+npm test          # Rust unit tests: note store, settings and app (cargo test --workspace)
 npm run check     # Svelte and TypeScript type checks
-cd src-tauri && cargo clippy --all-targets
+cargo clippy --workspace --all-targets
 ```
 
 Continuous integration runs the same checks on Ubuntu 22.04, Windows and macOS for every push and
@@ -50,7 +50,7 @@ pull request.
 npm run tauri build
 ```
 
-The installers for your system land in `src-tauri/target/release/bundle/`: `.deb`, `.rpm` and
+The installers for your system land in `target/release/bundle/`: `.deb`, `.rpm` and
 `.AppImage` on Linux, `.msi` and `.exe` on Windows, `.dmg` on macOS.
 
 ## Releases

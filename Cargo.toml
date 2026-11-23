@@ -1,0 +1,24 @@
+[workspace]
+members = ["src-tauri", "crates/core", "crates/mcp"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/mftnakrsu/flashjot"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+dirs = "7.0.0"
+tempfile = "3.27.0"
+
+# Moved from src-tauri/Cargo.toml: Cargo reads profiles only from the workspace root.
+# See https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

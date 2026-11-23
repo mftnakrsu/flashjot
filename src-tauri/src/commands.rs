@@ -1,8 +1,9 @@
 //! Tauri commands called from the frontend. Thin wrappers around `store` and `settings`.
 
-use crate::settings::{self, Settings};
-use crate::store::{self, Hit, Note, NoteMeta, Store, TaskGroup, Tree};
-use crate::{shortcuts, windows};
+use crate::{shortcuts, watch, windows};
+use flashjot_core::location::{default_root, notes_root, open_store};
+use flashjot_core::settings::{self, Settings};
+use flashjot_core::store::{self, Hit, Note, NoteMeta, Store, TaskGroup, Tree};
 use std::io;
 use std::path::{Path, PathBuf};
 use serde::Serialize;
@@ -13,38 +14,24 @@ pub struct AppState {
     pub store: Mutex<Store>,
     pub settings: Mutex<Settings>,
     pub settings_path: PathBuf,
+    /// Watches the notes folder; replaced when the folder changes, dropped to stop.
+    pub watch: Mutex<Option<watch::Watch>>,
+    /// Autosaves, so the watcher can drop their echo (see `watch_notes`).
+    pub own_writes: Mutex<watch::OwnWrites>,
 }
 
 impl AppState {
     pub fn new(settings_path: PathBuf) -> Self {
         let settings = settings::load(&settings_path);
         let store = open_store(notes_root(&settings), default_root());
-        AppState { store: Mutex::new(store), settings: Mutex::new(settings), settings_path }
+        AppState {
+            store: Mutex::new(store),
+            settings: Mutex::new(settings),
+            settings_path,
+            watch: Mutex::new(None),
+            own_writes: Mutex::new(watch::OwnWrites::default()),
+        }
     }
-}
-
-pub fn notes_root(s: &Settings) -> PathBuf {
-    match s.notes_dir.as_deref().map(str::trim) {
-        Some(dir) if !dir.is_empty() => PathBuf::from(dir),
-        _ => default_root(),
-    }
-}
-
-fn default_root() -> PathBuf {
-    dirs::document_dir().or_else(dirs::home_dir).unwrap_or_else(|| PathBuf::from(".")).join("Flashjot")
-}
-
-/// The saved notes folder, or `fallback` if it can't be used (e.g. a removed drive).
-/// The setting is kept, so the folder is used again once it is back.
-fn open_store(root: PathBuf, fallback: PathBuf) -> Store {
-    let store = Store::new(root);
-    let Err(e) = store.ensure() else { return store };
-    eprintln!("flashjot: notes folder {} unusable ({e}), using {}", store.root().display(), fallback.display());
-    let store = Store::new(fallback);
-    if let Err(e) = store.ensure() {
-        eprintln!("flashjot: notes folder {}: {e}", store.root().display());
-    }
-    store
 }
 
 /// Creates the notes folder first, so a folder that can't be created is never saved.
@@ -64,9 +51,45 @@ fn changed(app: &AppHandle) {
     let _ = app.emit("notes-changed", ());
 }
 
+/// (Re)starts watching the notes folder, so changes other apps make (an editor, a sync
+/// client, flashjot-mcp) reach the windows as `notes-changed`. A batch holding only our own
+/// autosaves is dropped: the editor already shows that text, and a refresh would rescan the
+/// whole notebook while holding the store lock that the next autosave waits for.
+pub fn watch_notes(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let Ok(root) = state.store.lock().map(|s| s.root().to_path_buf()) else { return };
+    // Some systems report canonical paths (macOS: /private/var/… for /var/…).
+    let root = root.canonicalize().unwrap_or(root);
+    if let Ok(mut own) = state.own_writes.lock() {
+        own.clear();
+    }
+    let handle = app.clone();
+    let base = root.clone();
+    let on_change = move |paths: Option<&[PathBuf]>| {
+        let echo = paths.is_some_and(|paths| {
+            let state = handle.state::<AppState>();
+            let own = state.own_writes.lock();
+            own.is_ok_and(|own| own.is_echo(&base, paths, store::modified_ms))
+        });
+        if !echo {
+            changed(&handle);
+        }
+    };
+    let watch = match watch::spawn(&root, on_change) {
+        Ok(w) => Some(w),
+        Err(e) => {
+            eprintln!("flashjot: not watching {}: {e:?}", root.display());
+            None
+        }
+    };
+    if let Ok(mut slot) = state.watch.lock() {
+        *slot = watch;
+    }
+}
+
 fn with_store<T>(
     state: &State<AppState>,
-    f: impl FnOnce(&Store) -> Result<T, crate::store::StoreError>,
+    f: impl FnOnce(&Store) -> Result<T, store::StoreError>,
 ) -> CmdResult<T> {
     let store = state.store.lock().map_err(|e| e.to_string())?;
     f(&store).map_err(|e| e.to_string())
@@ -106,6 +129,16 @@ pub fn add_quick_note(app: AppHandle, state: State<AppState>, text: String, task
     Ok(saved)
 }
 
+/// A new Inbox note with exactly this text, never read as tasks: the editor keeps typing here
+/// that it could not save to its page (changed or gone on disk).
+#[tauri::command]
+pub fn add_inbox_note(app: AppHandle, state: State<AppState>, text: String) -> CmdResult<NoteMeta> {
+    let now = chrono::Local::now().naive_local();
+    let meta = with_store(&state, |s| s.add_inbox(&text, now))?;
+    changed(&app);
+    Ok(meta)
+}
+
 #[tauri::command(async)]
 pub fn list_inbox(state: State<AppState>) -> CmdResult<Vec<NoteMeta>> {
     with_store(&state, |s| s.list_inbox())
@@ -121,11 +154,16 @@ pub fn read_note(state: State<AppState>, path: String) -> CmdResult<Note> {
     with_store(&state, |s| s.read(&path))
 }
 
-/// Autosave target; does not emit `notes-changed` to avoid reloading the editor on every keystroke.
+/// Autosave target. Emits nothing, and the notes-folder watcher drops the echo of this write
+/// (see `watch_notes`), so typing never reloads the lists or the editor.
 /// `modified` is the time from `read_note` or the last save; returns the new one.
 #[tauri::command]
 pub fn write_note(state: State<AppState>, path: String, content: String, modified: Option<i64>) -> CmdResult<i64> {
-    with_store(&state, |s| s.write(&path, &content, modified))
+    let next = with_store(&state, |s| s.write(&path, &content, modified))?;
+    if let Ok(mut own) = state.own_writes.lock() {
+        own.record(&path, next);
+    }
+    Ok(next)
 }
 
 #[tauri::command]
@@ -240,6 +278,7 @@ pub fn set_settings(app: AppHandle, state: State<AppState>, mut settings: Settin
     }
     let _ = app.emit("settings-changed", ());
     if new_root {
+        watch_notes(&app);
         changed(&app);
     }
     Ok(problems)
@@ -305,14 +344,5 @@ mod tests {
         assert_eq!(store.root(), d.path().join("notes"));
         assert!(d.path().join("notes/Inbox").is_dir());
         assert_eq!(settings::load(&settings_path), settings);
-    }
-
-    #[test]
-    fn startup_falls_back_when_saved_notes_dir_is_unusable() {
-        let d = tempfile::tempdir().unwrap();
-        let fallback = d.path().join("default");
-        let store = open_store(unusable(&d), fallback.clone());
-        assert_eq!(store.root(), fallback);
-        assert!(fallback.join("Inbox").is_dir());
     }
 }

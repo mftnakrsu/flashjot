@@ -47,6 +47,7 @@ export default defineConfig({
             'guide/shortcuts',
             'guide/settings',
             'guide/your-notes',
+            'guide/ai-agents',
           ],
         },
         {

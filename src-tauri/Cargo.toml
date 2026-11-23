@@ -5,7 +5,7 @@ description = "Capture ideas in a flash. Plain Markdown notes with a global quic
 authors = ["mftnakrsu"]
 license = "MIT"
 repository = "https://github.com/mftnakrsu/flashjot"
-edition = "2024"
+edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -22,22 +22,14 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
-dirs = "7.0.0"
-
-
-# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
-[profile.release]
-codegen-units = 1
-lto = true
-opt-level = "s"
-panic = "abort"
-strip = true
+flashjot-core = { path = "../crates/core" }
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+notify-debouncer-mini = "0.8.0"
 
 [dev-dependencies]
-tempfile = "3.27.0"
+tempfile.workspace = true
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-autostart = "2.7.0"

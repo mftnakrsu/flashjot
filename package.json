@@ -11,7 +11,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "tauri": "tauri",
-    "test": "cd src-tauri && cargo test"
+    "tauri:release": "node scripts/mcp-sidecar.mjs && tauri build --config src-tauri/tauri.mcp.conf.json",
+    "test": "cargo test --workspace"
   },
   "license": "MIT",
   "dependencies": {

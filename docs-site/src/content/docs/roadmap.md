@@ -14,6 +14,12 @@ self-contained.
 Quick tasks from the quick box ([#18](https://github.com/mftnakrsu/flashjot/issues/18)) and the
 Open tasks view ([#19](https://github.com/mftnakrsu/flashjot/issues/19)).
 
+## Done for the next release
+
+Watching the notes folder, so pages that other apps change reload
+([#21](https://github.com/mftnakrsu/flashjot/issues/21)), and `flashjot-mcp` for AI agents (see
+[Use with AI agents](/guide/ai-agents/)).
+
 ## Planned
 
 - **Optional SQLite storage.** A second backend behind the same `store` interface, for very large
@@ -21,8 +27,6 @@ Open tasks view ([#19](https://github.com/mftnakrsu/flashjot/issues/19)).
   ([#22](https://github.com/mftnakrsu/flashjot/issues/22)).
 - **Wayland global shortcuts** through the XDG GlobalShortcuts portal, so Wayland users don't need
   custom desktop shortcuts ([#20](https://github.com/mftnakrsu/flashjot/issues/20)).
-- **Watch the notes folder** and reload pages that other apps change
-  ([#21](https://github.com/mftnakrsu/flashjot/issues/21)).
 - **Tags** with `#hashtags`, and filtering by tag
   ([#23](https://github.com/mftnakrsu/flashjot/issues/23)).
 - **Images and attachments** pasted into pages

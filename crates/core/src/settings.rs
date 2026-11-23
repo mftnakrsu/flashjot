@@ -45,6 +45,12 @@ pub fn load(path: &Path) -> Settings {
     })
 }
 
+/// Like `load`, but never touches the file: a missing or corrupt one gives defaults and a
+/// corrupt one stays as it is. For flashjot-mcp, which must never write the app's settings.
+pub fn peek(path: &Path) -> Settings {
+    std::fs::read_to_string(path).ok().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
+}
+
 pub fn save(path: &Path, settings: &Settings) -> io::Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
@@ -105,5 +111,20 @@ mod tests {
         save(&p, &s).unwrap();
         assert_eq!(load(&p), s);
         assert!(fs::read_to_string(&p).unwrap().contains("\"quickShortcut\""));
+    }
+
+    #[test]
+    fn peek_reads_settings_and_never_moves_a_corrupt_file() {
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("settings.json");
+        assert_eq!(peek(&p), Settings::default());
+        fs::write(&p, r#"{"language":"tr","tasksPage":"Görevler.md"}"#).unwrap();
+        let s = peek(&p);
+        assert_eq!(s.language, "tr");
+        assert_eq!(s.tasks_page.as_deref(), Some("Görevler.md"));
+        fs::write(&p, "{ not json").unwrap();
+        assert_eq!(peek(&p), Settings::default());
+        assert_eq!(fs::read_to_string(&p).unwrap(), "{ not json");
+        assert!(!d.path().join("settings.json.bak").exists());
     }
 }

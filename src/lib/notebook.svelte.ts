@@ -37,12 +37,16 @@ class Notebook {
   focusTitle = $state(0);
   /** Set by the editor; flushes pending autosave before the open page changes. */
   flush: () => Promise<void> = async () => {};
+  /** Set by the editor; shows the open page again if it changed on disk and has no unsaved text. */
+  reloadOpen: () => Promise<void> = async () => {};
 
   folderNames = $derived(this.tree.folders.map((f) => f.name));
 
-  /** Runs on every notes-changed event, which each command that changes notes emits. */
+  /** Runs on every notes-changed event: each command that changes notes emits it, and so does
+   *  the notes-folder watcher when another app changes a file (it drops the echo of our autosaves). */
   async refresh() {
     try {
+      await this.reloadOpen();
       const [tree, inbox, tasks] = await Promise.all([api.getTree(), api.listInbox(), api.openTasks()]);
       this.tree = tree;
       this.inbox = inbox;
@@ -56,7 +60,8 @@ class Notebook {
   async show(view: View) {
     await this.flush();
     this.view = view;
-    // Autosave doesn't emit notes-changed, so previews of notes edited since may be stale.
+    // Autosave doesn't cause notes-changed (the folder watcher drops its echo), so previews
+    // of notes edited just now may be stale; reload the Inbox right away.
     if (view.kind === "inbox") {
       try {
         this.inbox = await api.listInbox();
@@ -64,6 +69,14 @@ class Notebook {
         this.error(e);
       }
     }
+  }
+
+  /** Called by the editor when the open page is gone on disk (moved, renamed or deleted in
+   *  another app): shows the Inbox and reloads the lists. Doesn't flush: the editor calls this
+   *  from inside its save queue, and has nothing left to save for this page. */
+  pageGone(path: string) {
+    if (this.view.kind === "page" && this.view.path === path) this.view = { kind: "inbox" };
+    return this.refresh();
   }
 
   openPage(path: string) {

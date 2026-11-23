@@ -110,6 +110,16 @@ Documents/Flashjot/
 
 You can pick another folder in **Settings**. Settings are stored in a small JSON file in your system's app config folder.
 
+## Use with AI agents
+
+Flashjot ships `flashjot-mcp`, an MCP server, so Claude Code, Claude Desktop, Cursor and other
+agents can capture, read, search and organise your notes with the app's own rules. It can't empty
+the trash, and it never overwrites a page that changed since it read it. Setup: [flashjot.mefby.com/guide/ai-agents](https://flashjot.mefby.com/guide/ai-agents/).
+
+```bash
+claude mcp add flashjot -- /usr/bin/flashjot-mcp   # path depends on your system, see the guide
+```
+
 ## Build from source
 
 Requirements: [Rust](https://rustup.rs) 1.90+, Node.js 20+, and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS. On Debian, Ubuntu or Pardus:
@@ -124,17 +134,18 @@ Then:
 git clone https://github.com/mftnakrsu/flashjot && cd flashjot
 npm install
 npm run tauri dev      # run with hot reload
-npm test               # Rust unit tests for the note store and settings
+npm test               # Rust unit tests (cargo test --workspace)
 npm run check          # Svelte and TypeScript checks
-npm run tauri build    # installers in src-tauri/target/release/bundle/
+npm run tauri build    # installers in target/release/bundle/
 ```
 
 How the code is organized:
 
 | Path | What it does |
 |---|---|
-| `src-tauri/src/store.rs` | Reads and writes notes on disk. Has no Tauri dependency and is fully unit-tested |
-| `src-tauri/src/settings.rs` | Settings file with defaults |
+| `crates/core/src/store.rs` | Reads and writes notes on disk. Has no Tauri dependency and is fully unit-tested |
+| `crates/core/src/settings.rs` | Settings file with defaults |
+| `crates/core/src/location.rs` | Where the settings file and the notes folder are |
 | `src-tauri/src/windows.rs` | Quick box and notebook windows, focus handling |
 | `src-tauri/src/shortcuts.rs`, `tray.rs` | Global shortcuts and the tray menu |
 | `src-tauri/src/commands.rs` | The commands the UI calls |
@@ -148,7 +159,7 @@ How the code is organized:
 
 - [ ] Optional SQLite storage backend for very large notebooks, behind the same `store` interface ([#22](https://github.com/mftnakrsu/flashjot/issues/22))
 - [ ] Wayland global shortcuts through the XDG GlobalShortcuts portal ([#20](https://github.com/mftnakrsu/flashjot/issues/20))
-- [ ] Watch the notes folder and reload pages edited in other apps ([#21](https://github.com/mftnakrsu/flashjot/issues/21))
+- [x] Watch the notes folder and reload pages edited in other apps ([#21](https://github.com/mftnakrsu/flashjot/issues/21))
 - [ ] Tags and `#hashtags` ([#23](https://github.com/mftnakrsu/flashjot/issues/23))
 - [ ] Images and attachments ([#24](https://github.com/mftnakrsu/flashjot/issues/24))
 - [ ] Sync, using any folder-sync tool for now; built-in later ([#25](https://github.com/mftnakrsu/flashjot/issues/25))
