@@ -215,6 +215,12 @@ impl Store {
         Ok(())
     }
 
+    /// The check `create_page` and `move_to` make on `folder`, without creating anything, so a
+    /// caller can tell a refused folder from a refused title or note path.
+    pub fn check_folder(&self, folder: &str) -> Result<(), StoreError> {
+        self.folder_dir(folder).map(|_| ())
+    }
+
     pub fn create_page(&self, folder: &str, title: &str) -> Result<NoteMeta, StoreError> {
         let dir = self.folder_dir(folder)?;
         let title = valid_name(title)?;
@@ -887,6 +893,17 @@ mod tests {
         assert!(matches!(s.create_page("Ideas", "  "), Err(StoreError::InvalidName)));
         assert!(matches!(s.create_page("Ideas", ".hidden"), Err(StoreError::InvalidName)));
         assert!(matches!(s.create_page("../up", "x"), Err(StoreError::InvalidName)));
+    }
+
+    #[test]
+    fn check_folder_validates_without_creating_anything() {
+        let (d, s) = store();
+        assert!(s.check_folder("").is_ok());
+        assert!(s.check_folder("Ideas/Sub").is_ok());
+        assert!(matches!(s.check_folder("../up"), Err(StoreError::InvalidName)));
+        assert!(matches!(s.check_folder(TRASH), Err(StoreError::InvalidName)));
+        assert!(matches!(s.check_folder("con"), Err(StoreError::ReservedName)));
+        assert!(!d.path().join("Ideas").exists());
     }
 
     #[test]

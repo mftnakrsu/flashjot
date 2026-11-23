@@ -161,15 +161,18 @@ impl Notebook {
     }
 
     pub fn create_page(&self, folder: &str, title: &str) -> Result<NoteMeta, ToolError> {
+        // A bad folder and a bad title are both name errors; checking the folder alone first
+        // tells them apart (the store checks the folder first too).
+        self.store.check_folder(folder).map_err(|e| message(e, folder))?;
         self.store.create_page(folder, title).map_err(|e| message(e, title))
     }
 
     pub fn rename(&self, path: &str, title: &str) -> Result<NoteMeta, ToolError> {
-        self.store.rename(path, title).map_err(|e| message(e, path))
+        self.store.rename(path, title).map_err(|e| message_for(e, title, path))
     }
 
     pub fn move_to(&self, path: &str, folder: &str) -> Result<NoteMeta, ToolError> {
-        self.store.move_to(path, folder).map_err(|e| message(e, path))
+        self.store.move_to(path, folder).map_err(|e| message_for(e, folder, path))
     }
 
     pub fn trash(&self, path: &str) -> Result<Trashed, ToolError> {
@@ -178,7 +181,13 @@ impl Notebook {
     }
 
     pub fn restore(&self, trash_path: &str, original_path: &str) -> Result<(), ToolError> {
-        self.store.restore(trash_path, original_path).map_err(|e| message(e, trash_path))
+        self.store.restore(trash_path, original_path).map_err(|e| {
+            // Either path can be the unusable one. `read` applies the same check to a page
+            // path that `restore` applies to `original_path`, so it says whether that is it.
+            let original_refused = matches!(e, StoreError::InvalidPath)
+                && matches!(self.store.read(original_path), Err(StoreError::InvalidPath));
+            message(e, if original_refused { original_path } else { trash_path })
+        })
     }
 }
 
@@ -191,6 +200,14 @@ pub fn tasks_title(language: &str, locale: Option<String>) -> &'static str {
         _ => locale.is_some_and(|l| l.to_lowercase().starts_with("tr")),
     };
     if turkish { "Görevler" } else { "Tasks" }
+}
+
+/// `message` for a call with a note path and a name argument (a new title, a folder): the
+/// store refuses a bad `name` with `InvalidName`/`ReservedName`, and anything else is about
+/// the note at `path`.
+fn message_for(e: StoreError, name: &str, path: &str) -> ToolError {
+    let subject = if matches!(e, StoreError::InvalidName | StoreError::ReservedName) { name } else { path };
+    message(e, subject)
 }
 
 /// Store errors as messages an agent can act on (spec §5).
@@ -383,5 +400,54 @@ mod tests {
         let nb = Notebook::open(Some(d.path().join("new/notes")), None).unwrap();
         assert!(nb.root().join("Inbox").is_dir());
         assert!(Path::new(&nb.root()).ends_with("new/notes"));
+    }
+
+    #[test]
+    fn rename_blames_the_argument_that_was_refused() {
+        let (_d, nb) = notebook(None);
+        let page = nb.create_page("Projects", "Idea").unwrap();
+        let err = nb.rename(&page.path, "a/b").unwrap_err();
+        assert!(err.0.starts_with("\"a/b\" can't be used as a name"), "{}", err.0);
+        let err = nb.rename("Projects/Nope.md", "Fine").unwrap_err();
+        assert!(err.0.starts_with("No note at \"Projects/Nope.md\""), "{}", err.0);
+        assert_eq!(nb.rename(&page.path, "Plan").unwrap().path, "Projects/Plan.md");
+    }
+
+    #[test]
+    fn move_blames_the_argument_that_was_refused() {
+        let (_d, nb) = notebook(None);
+        let page = nb.create_page("Projects", "Idea").unwrap();
+        let err = nb.move_to(&page.path, "../outside").unwrap_err();
+        assert!(err.0.starts_with("\"../outside\" can't be used as a name"), "{}", err.0);
+        assert!(!nb.root().parent().unwrap().join("outside").exists());
+        let err = nb.move_to("Projects/Nope.md", "Archive").unwrap_err();
+        assert!(err.0.starts_with("No note at \"Projects/Nope.md\""), "{}", err.0);
+        assert_eq!(nb.move_to(&page.path, "Archive").unwrap().path, "Archive/Idea.md");
+    }
+
+    #[test]
+    fn create_page_blames_the_argument_that_was_refused() {
+        let (_d, nb) = notebook(None);
+        let err = nb.create_page("../x", "Plan").unwrap_err();
+        assert!(err.0.starts_with("\"../x\" can't be used as a name"), "{}", err.0);
+        let err = nb.create_page("Projects", "a/b").unwrap_err();
+        assert!(err.0.starts_with("\"a/b\" can't be used as a name"), "{}", err.0);
+        // A refused call leaves nothing behind.
+        assert!(!nb.root().join("Projects").exists());
+        assert_eq!(nb.create_page("Projects", "Plan").unwrap().path, "Projects/Plan.md");
+    }
+
+    #[test]
+    fn restore_blames_the_argument_that_was_refused() {
+        let (_d, nb) = notebook(None);
+        let page = nb.create_page("Projects", "Idea").unwrap();
+        let t = nb.trash(&page.path).unwrap();
+        let err = nb.restore(&t.trash_path, "../x.md").unwrap_err();
+        assert!(err.0.starts_with("No note at \"../x.md\""), "{}", err.0);
+        let err = nb.restore("Elsewhere/x.md", &t.original_path).unwrap_err();
+        assert!(err.0.starts_with("No note at \"Elsewhere/x.md\""), "{}", err.0);
+        let err = nb.restore(".trash/nope.md", &t.original_path).unwrap_err();
+        assert!(err.0.starts_with("No note at \".trash/nope.md\""), "{}", err.0);
+        nb.restore(&t.trash_path, &t.original_path).unwrap();
     }
 }
