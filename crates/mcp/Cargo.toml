@@ -1,6 +1,6 @@
 [package]
 name = "flashjot-mcp"
-version = "0.3.0"
+version = "0.4.0"
 description = "MCP server for Flashjot: lets AI agents capture, read, search and organise your notes."
 edition.workspace = true
 license.workspace = true

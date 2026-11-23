@@ -6,6 +6,8 @@ All notable changes to Flashjot are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-23
+
 ### Added
 
 - The notebook updates when notes change outside Flashjot: the sidebar, the Inbox and the open page (#21).
@@ -92,6 +94,7 @@ All notable changes to Flashjot are listed here. The format follows
 First release: a global quick-capture box, an Inbox, a Markdown notebook with folders and search,
 English and Turkish.
 
+[0.4.0]: https://github.com/mftnakrsu/flashjot/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mftnakrsu/flashjot/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mftnakrsu/flashjot/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/mftnakrsu/flashjot/compare/v0.1.0...v0.1.1
